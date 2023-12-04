@@ -1,0 +1,3 @@
+// Definitions of DirectX features.
+
+D3D_FEATURE_BOOL(DoublePrecisionFloatShaderOps, "double-precision floating point shader operations")

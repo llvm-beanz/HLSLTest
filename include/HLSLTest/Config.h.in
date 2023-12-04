@@ -1,0 +1,14 @@
+/*===------- HLSLTest/Config.h - HLSLTest configuration -----------*- C -*-===*/
+/*                                                                            */
+/* Part of the LLVM Project, under the Apache License v2.0 with LLVM          */
+/* Exceptions.                                                                */
+/* See https://llvm.org/LICENSE.txt for license information.                  */
+/* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception                    */
+/*                                                                            */
+/*===----------------------------------------------------------------------===*/
+
+/* Enable D3D12 Support */
+#cmakedefine HLSLTEST_ENABLE_D3D12
+
+/* Enable Vulkan Support */
+#cmakedefine HLSLTEST_ENABLE_VULKAN
