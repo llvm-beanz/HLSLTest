@@ -28,13 +28,13 @@ private:
 public:
   VKDevice(VkPhysicalDevice D) : Device(D) {
     vkGetPhysicalDeviceProperties(Device, &Props);
+    Description = llvm::StringRef(Props.deviceName, VK_MAX_PHYSICAL_DEVICE_NAME_SIZE);
   }
   VKDevice(const VKDevice &) = default;
 
   ~VKDevice() override = default;
 
   llvm::StringRef getAPIName() const override { return "Vulkan"; }
-  llvm::StringRef getDescription() const { return Props.deviceName; }
 
   const Capabilities &getCapabilities() override {
     if (Caps.empty())
