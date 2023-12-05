@@ -72,11 +72,11 @@ public:
 
   const Capabilities &getCapabilities() override {
     if (Caps.empty())
-      llvm::cantFail(queryCapabilities()); // assert on error!
+      queryCapabilities();
     return Caps;
   }
 
-  llvm::Error queryCapabilities() {
+  void queryCapabilities() {
     CD3DX12FeatureSupport Features;
     Features.Init(Device);
 
@@ -89,7 +89,6 @@ public:
       #Name, make_capability<uint32_t>(#Name, Features.Name())));
 
 #include "DXFeatures.def"
-    return llvm::Error::success();
   }
 };
 

@@ -36,7 +36,21 @@ public:
   llvm::StringRef getAPIName() const override { return "Vulkan"; }
   llvm::StringRef getDescription() const { return Props.deviceName; }
 
-  const Capabilities &getCapabilities() override { return Caps; }
+  const Capabilities &getCapabilities() override {
+    if (Caps.empty())
+      queryCapabilities();
+    return Caps;
+  }
+
+  void queryCapabilities() {
+    VkPhysicalDeviceFeatures Features;
+    vkGetPhysicalDeviceFeatures(Device, &Features);
+
+#define VULKAN_FEATURE_BOOL(Name)                                              \
+  Caps.insert(                                                                 \
+      std::make_pair(#Name, make_capability<bool>(#Name, Features.Name)));
+#include "VKFeatures.def"
+  }
 };
 
 class VKContext {
