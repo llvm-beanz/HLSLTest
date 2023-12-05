@@ -29,10 +29,16 @@ int main(int ArgC, char **ArgV) {
   ExitOnErr(Device::initialize());
 
   for (const auto &D : Device::devices()) {
+    outs() << "Device: {\n";
+    outs() << "  API: " << D->getAPIName() << "\n";
+    outs() << "  Description: " << D->getDescription() << "\n";
+    outs() << "  Features: {\n";
     for (const auto &C : D->getCapabilities()) {
-      C.second.print(llvm::outs());
-      llvm::outs() << "\n";
+      outs() << "    ";
+      C.second.print(outs());
+      outs() << "\n";
     }
+    outs() << "  }\n}\n";
   }
   return 0;
 }

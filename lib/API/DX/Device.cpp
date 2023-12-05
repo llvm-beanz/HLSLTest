@@ -14,7 +14,6 @@
 #include <d3dx12.h>
 #include <dxgi1_4.h>
 
-
 // The windows headers define these macros which conflict with the C++ standard
 // library. Undefining them before including any LLVM C++ code prevents errors.
 #undef max
@@ -27,9 +26,17 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 
-using namespace hlsltest;
+#include <locale>
+#include <codecvt>
 
+using namespace hlsltest;
 namespace {
+
+std::string StringFromWString(const std::wstring &In) {
+  using convert_type = std::codecvt_utf8<wchar_t>;
+  std::wstring_convert<convert_type, wchar_t> Converter;
+  return Converter.to_bytes(In);
+}
 
 class DXDevice : public hlsltest::Device {
 private:
@@ -38,11 +45,16 @@ private:
   Capabilities Caps;
 
 public:
-  DXDevice(CComPtr<IDXGIAdapter1> A, CComPtr<ID3D12Device> D)
-      : Adapter(A), Device(D) {}
+  DXDevice(CComPtr<IDXGIAdapter1> A, CComPtr<ID3D12Device> D,
+           DXGI_ADAPTER_DESC1 Desc)
+      : Adapter(A), Device(D) {
+        Description = StringFromWString(std::wstring(Desc.Description, 128));
+      }
   DXDevice(const DXDevice &) = default;
 
   ~DXDevice() override = default;
+
+  llvm::StringRef getAPIName() const override { return "DirectX"; }
 
   static llvm::Expected<DXDevice> Create(CComPtr<IDXGIAdapter1> Adapter) {
     CComPtr<ID3D12Device> Device;
@@ -51,7 +63,11 @@ public:
                                           IID_PPV_ARGS(&Device)),
                         "Failed to create D3D device"))
       return Err;
-    return DXDevice(Adapter, Device);
+    DXGI_ADAPTER_DESC1 Desc;
+    if (auto Err = HR::toError(Adapter->GetDesc1(&Desc),
+                               "Failed to get device description"))
+      return Err;
+    return DXDevice(Adapter, Device, Desc);
   }
 
   const Capabilities &getCapabilities() override {

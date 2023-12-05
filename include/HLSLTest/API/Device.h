@@ -14,31 +14,36 @@
 
 #include "HLSLTest/API/Capabilities.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/StringRef.h"
 
 #include <memory>
+#include <string>
 
 namespace hlsltest {
 
 class Device {
+protected:
+  std::string Description;
+
 public:
-virtual const Capabilities &getCapabilities() = 0;
-virtual ~Device() = 0;
+  virtual const Capabilities &getCapabilities() = 0;
+  virtual llvm::StringRef getAPIName() const = 0;
+  virtual ~Device() = 0;
 
-static void registerDevice(std::shared_ptr<Device> D);
-static llvm::Error initialize();
+  llvm::StringRef getDescription() const { return Description; }
 
-using DeviceArray = llvm::SmallVector<std::shared_ptr<Device>>;
-using DeviceIterator = DeviceArray::iterator;
-using DeviceRange = llvm::iterator_range<DeviceIterator>;
+  static void registerDevice(std::shared_ptr<Device> D);
+  static llvm::Error initialize();
 
-static DeviceIterator begin();
-static DeviceIterator end();
-static inline DeviceRange devices() {
-  return DeviceRange(begin(), end());
-}
+  using DeviceArray = llvm::SmallVector<std::shared_ptr<Device>>;
+  using DeviceIterator = DeviceArray::iterator;
+  using DeviceRange = llvm::iterator_range<DeviceIterator>;
 
+  static DeviceIterator begin();
+  static DeviceIterator end();
+  static inline DeviceRange devices() { return DeviceRange(begin(), end()); }
 };
 
-}
+} // namespace hlsltest
 
 #endif // HLSLTEST_API_DEVICE_H
