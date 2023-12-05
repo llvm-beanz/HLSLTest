@@ -12,14 +12,31 @@
 #ifndef HLSLTEST_API_DEVICE_H
 #define HLSLTEST_API_DEVICE_H
 
-namespace hlsltest {
+#include "HLSLTest/API/Capabilities.h"
+#include "llvm/ADT/iterator_range.h"
 
-class Capabilities;
+#include <memory>
+
+namespace hlsltest {
 
 class Device {
 public:
-virtual Capabilities getCapabilities() = 0;
-virtual ~Device() {}
+virtual const Capabilities &getCapabilities() = 0;
+virtual ~Device() = 0;
+
+static void registerDevice(std::shared_ptr<Device> D);
+static llvm::Error initialize();
+
+using DeviceArray = llvm::SmallVector<std::shared_ptr<Device>>;
+using DeviceIterator = DeviceArray::iterator;
+using DeviceRange = llvm::iterator_range<DeviceIterator>;
+
+static DeviceIterator begin();
+static DeviceIterator end();
+static inline DeviceRange devices() {
+  return DeviceRange(begin(), end());
+}
+
 };
 
 }

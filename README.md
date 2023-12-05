@@ -6,5 +6,5 @@ Experimental Runtime test suite for HLSL
 Add the following to the CMake options:
 
 ```shell
--DLLVM_EXTERNAL_HLSLTEST_SOURCE_DIR=${projectDir}\..\hlsl-test-suite -DLLVM_EXTERNAL_PROJECTS="HLSLTest"
+-DLLVM_EXTERNAL_HLSLTEST_SOURCE_DIR=${workspaceRoot}\..\hlsl-test-suite -DLLVM_EXTERNAL_PROJECTS="HLSLTest"
 ```

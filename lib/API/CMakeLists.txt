@@ -1,11 +1,19 @@
 if (HLSLTEST_ENABLE_VULKAN)
   #list(APPEND api_sources VK/Device.cpp)
+  list(APPEND api_libraries ${Vulkan_LIBRARIES})
 endif()
 
 if (HLSLTEST_ENABLE_D3D12)
   list(APPEND api_sources DX/Device.cpp)
+  list(APPEND api_libraries ${D3D12_LIBRARIES})
 endif()
 
 add_hlsl_library(API
   Capabilities.cpp
+  Device.cpp
   ${api_sources})
+
+target_include_directories(HLSLTestAPI SYSTEM BEFORE
+  PRIVATE ${DIRECTX_HEADERS_PATH}/include/directx)
+
+target_link_libraries(HLSLTestAPI INTERFACE ${api_libraries})

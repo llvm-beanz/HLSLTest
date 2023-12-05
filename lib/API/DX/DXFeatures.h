@@ -1,4 +1,4 @@
-//===- Capabilities.cpp - HLSL API Capabilities API -----------------------===//
+//===- DXFeatures.h - DirectX Features ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,12 +9,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "HLSLTest/API/Capabilities.h"
+#ifndef HLSLTEST_API_DXFEATURES_H
+#define HLSLTEST_API_DXFEATURES_H
 
-using namespace hlsltest;
+namespace hlsltest {
+namespace directx {
 
-char CapabilityValueBase::ID = 0;
-char CapabilityValueBool::ID = 0;
-char CapabilityValueUnsigned::ID = 0;
+#define SHADER_MODEL_ENUM(NewCase, OldCase, Value) NewCase = Value,
+enum ShaderModel {
+    #include "DXFeatures.def"
+};
 
-void CapabilityValueBase::anchor() {}
+}
+
+} // namespace hlsltest
+
+#endif // HLSLTEST_API_DXFEATURES_H

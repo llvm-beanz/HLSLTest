@@ -1,0 +1,69 @@
+//===- DX/Device.cpp - HLSL API DirectX Device API ------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+//
+//===----------------------------------------------------------------------===//
+
+#include "HLSLTest/API/Device.h"
+#include "HLSLTest/Config.h"
+#include "llvm/Support/Error.h"
+
+using namespace hlsltest;
+
+#ifdef HLSLTEST_ENABLE_D3D12
+llvm::Error InitializeDXDevices();
+#endif
+
+namespace {
+class DeviceContext {
+public:
+  using DeviceArray = Device::DeviceArray;
+  using DeviceIterator = Device::DeviceIterator;
+
+private:
+  DeviceArray Devices;
+
+  DeviceContext() = default;
+  ~DeviceContext() = default;
+  DeviceContext(const DeviceContext &) = delete;
+
+public:
+  static DeviceContext &Instance() {
+    static DeviceContext Ctx;
+    return Ctx;
+  }
+
+  void registerDevice(std::shared_ptr<Device> D) { Devices.push_back(D); }
+
+  DeviceIterator begin() { return Devices.begin(); }
+
+  DeviceIterator end() { return Devices.end(); }
+};
+} // namespace
+
+Device::~Device() {}
+
+void Device::registerDevice(std::shared_ptr<Device> D) {
+  DeviceContext::Instance().registerDevice(D);
+}
+
+llvm::Error Device::initialize() {
+#ifdef HLSLTEST_ENABLE_D3D12
+  if (auto Err = InitializeDXDevices())
+    return Err;
+#endif
+  return llvm::Error::success();
+}
+
+Device::DeviceIterator Device::begin() {
+  return DeviceContext::Instance().begin();
+}
+
+Device::DeviceIterator Device::end() {
+  return DeviceContext::Instance().end();
+}

@@ -12,16 +12,122 @@
 #ifndef HLSLTEST_API_CAPABILITIES_H
 #define HLSLTEST_API_CAPABILITIES_H
 
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
+
+#include <memory>
+#include <string>
+
 namespace hlsltest {
 
-bool Dummy();
+class CapabilityValueBase {
+public:
+  virtual ~CapabilityValueBase() = default;
+
+  // Returns the class ID for this type.
+  static const void *classID() { return &ID; }
+
+  // Check whether this instance is a subclass of the class identified by
+  // ClassID.
+  virtual bool isA(const void *const ClassID) const {
+    return ClassID == classID();
+  }
+
+  // Check whether this instance is a subclass of CapabilityValueT.
+  template <typename CapabilityValueT> bool isA() const {
+    return isA(CapabilityValueT::classID());
+  }
+
+  virtual std::string toString() const = 0;
+
+private:
+  virtual void anchor();
+  static char ID;
+};
+
+template <typename ThisT, typename ValueT>
+class CapabilityValue : public CapabilityValueBase {
+public:
+  CapabilityValue(ValueT V) : Value(V) {}
+
+  static const void *classID() { return &ThisT::ID; }
+
+  bool isA(const void *const ClassID) const override {
+    return ClassID == classID() || CapabilityValueBase::isA(ClassID);
+  }
+
+  ValueT getValue() const { return Value; }
+
+  std::string toString() const override { return ThisT::valueToString(Value); }
+
+protected:
+  ValueT Value;
+};
+
+class CapabilityValueBool : public CapabilityValue<CapabilityValueBool, bool> {
+public:
+  CapabilityValueBool(bool V) : CapabilityValue<CapabilityValueBool, bool>(V) {}
+  static char ID;
+  static std::string valueToString(bool V) {
+    return std::string(V ? "true" : "false");
+  }
+};
+
+class CapabilityValueUnsigned
+    : public CapabilityValue<CapabilityValueUnsigned, uint32_t> {
+public:
+  CapabilityValueUnsigned(uint32_t V)
+      : CapabilityValue<CapabilityValueUnsigned, uint32_t>(V) {}
+  static char ID;
+  static std::string valueToString(uint32_t V) { return std::to_string(V); }
+};
+
+namespace detail {
+template <typename T> struct CapabilityTypeHelper {};
+
+template <> struct CapabilityTypeHelper<bool> {
+  using Capability = CapabilityValueBool;
+};
+
+template <> struct CapabilityTypeHelper<uint32_t> {
+  using Capability = CapabilityValueUnsigned;
+};
+} // namespace detail
+
+template <typename T>
+using CapabilityType = typename detail::CapabilityTypeHelper<T>::Capability;
 
 class Capability {
+  std::string Name;
+  std::shared_ptr<CapabilityValueBase> CapabilityData;
+
+public:
+  Capability(llvm::StringRef N, std::shared_ptr<CapabilityValueBase> &&D)
+      : Name(N), CapabilityData(D) {}
+
+  ~Capability() = default;
+  Capability(const Capability &) = default;
+
+  llvm::StringRef getName() const { return Name; }
+
+  const CapabilityValueBase *getData() const { return CapabilityData.get(); }
+
+  std::string getValueSting() const {
+    return CapabilityData->toString();
+  }
+
+  void print(llvm::raw_ostream &OS) const {
+    OS << getName() << " = " << getValueSting();
+  }
 };
 
-class Capabilities {
-};
-
+template <typename T> Capability make_capability(llvm::StringRef N, T Value) {
+  return Capability(N, std::make_shared<CapabilityType<T>>(Value));
 }
+
+using Capabilities = llvm::StringMap<Capability>;
+
+} // namespace hlsltest
 
 #endif // HLSLTEST_API_CAPABILITIES_H
