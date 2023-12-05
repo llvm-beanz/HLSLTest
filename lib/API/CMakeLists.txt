@@ -1,5 +1,5 @@
 if (HLSLTEST_ENABLE_VULKAN)
-  #list(APPEND api_sources VK/Device.cpp)
+  list(APPEND api_sources VK/Device.cpp)
   list(APPEND api_libraries ${Vulkan_LIBRARIES})
 endif()
 

@@ -19,6 +19,10 @@ using namespace hlsltest;
 llvm::Error InitializeDXDevices();
 #endif
 
+#ifdef HLSLTEST_ENABLE_VULKAN
+llvm::Error InitializeVXDevices();
+#endif
+
 namespace {
 class DeviceContext {
 public:
@@ -55,6 +59,10 @@ void Device::registerDevice(std::shared_ptr<Device> D) {
 llvm::Error Device::initialize() {
 #ifdef HLSLTEST_ENABLE_D3D12
   if (auto Err = InitializeDXDevices())
+    return Err;
+#endif
+#ifdef HLSLTEST_ENABLE_VULKAN
+  if (auto Err = InitializeVXDevices())
     return Err;
 #endif
   return llvm::Error::success();
