@@ -14,7 +14,8 @@ add_hlsl_library(API
   ${api_sources})
 
 target_include_directories(HLSLTestAPI SYSTEM BEFORE
-  PRIVATE ${DIRECTX_HEADERS_PATH}/include/directx)
+  PRIVATE ${DIRECTX_HEADERS_PATH}/include/directx
+  PRIVATE ${Vulkan_INCLUDE_DIRS})
 
 target_link_libraries(HLSLTestAPI INTERFACE ${api_libraries})
 if (TARGET DIRECTX_HEADERS)
