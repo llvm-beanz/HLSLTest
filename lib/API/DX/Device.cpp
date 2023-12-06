@@ -21,13 +21,15 @@
 
 #include "HLSLTest/API/Capabilities.h"
 #include "HLSLTest/API/Device.h"
+#include "HLSLTest/API/Pipeline.h"
 #include "HLSLTest/WinError.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 
-#include <locale>
 #include <codecvt>
+#include <locale>
+
 
 using namespace hlsltest;
 namespace {
@@ -48,8 +50,8 @@ public:
   DXDevice(CComPtr<IDXGIAdapter1> A, CComPtr<ID3D12Device> D,
            DXGI_ADAPTER_DESC1 Desc)
       : Adapter(A), Device(D) {
-        Description = StringFromWString(std::wstring(Desc.Description, 128));
-      }
+    Description = StringFromWString(std::wstring(Desc.Description, 128));
+  }
   DXDevice(const DXDevice &) = default;
 
   ~DXDevice() override = default;
@@ -81,15 +83,38 @@ public:
     CD3DX12FeatureSupport Features;
     Features.Init(Device);
 
-#define D3D_FEATURE_BOOL(Name)                                           \
+#define D3D_FEATURE_BOOL(Name)                                                 \
   Caps.insert(                                                                 \
       std::make_pair(#Name, make_capability<bool>(#Name, Features.Name())));
 
-#define D3D_FEATURE_UINT(Name)                                           \
+#define D3D_FEATURE_UINT(Name)                                                 \
   Caps.insert(std::make_pair(                                                  \
       #Name, make_capability<uint32_t>(#Name, Features.Name())));
 
 #include "DXFeatures.def"
+  }
+
+  llvm::Expected<CComPtr<ID3D12RootSignature>>
+  createRootSignature(Pipeline &P) {
+    uint32_t DescriptorCount = 0;
+    for (auto &D : P.Sets)
+      DescriptorCount += D.Resources.size();
+    std::unique_ptr<D3D12_DESCRIPTOR_RANGE[]> Ranges =
+        std::unique_ptr<D3D12_DESCRIPTOR_RANGE[]>(new D3D12_DESCRIPTOR_RANGE[DescriptorCount]);
+
+    uint32_t RangeIdx = 0;
+    for (const auto &D : P.Sets) {
+      uint32_t DescriptorIdx = 0;
+      for (const auto &R : D.Resources) {
+        Ranges.get()[RangeIdx].NumDescriptors = 1;
+        Ranges.get()[RangeIdx].BaseShaderRegister = R.DXBinding.Register;
+        Ranges.get()[RangeIdx].RegisterSpace = R.DXBinding.Space;
+        Ranges.get()[RangeIdx].OffsetInDescriptorsFromTableStart =
+            DescriptorIdx;
+        RangeIdx++;
+      }
+    }
+    return nullptr;
   }
 
   llvm::Error executePipeline(Pipeline &P) override {

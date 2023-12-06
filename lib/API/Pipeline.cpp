@@ -56,6 +56,13 @@ void MappingTraits<hlsltest::Resource>::mapping(IO &I, hlsltest::Resource &R) {
     DATA_CASE(Float32, float)
     DATA_CASE(Float64, double)
   }
+  I.mapRequired("DirectXBinding", R.DXBinding);
+}
+
+void MappingTraits<hlsltest::DirectXBinding>::mapping(
+    IO &I, hlsltest::DirectXBinding &B) {
+  I.mapRequired("Register", B.Register);
+  I.mapRequired("Space", B.Space);
 }
 } // namespace yaml
 } // namespace llvm

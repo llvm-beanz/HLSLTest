@@ -35,7 +35,12 @@ enum class DataFormat {
 enum class DataAccess {
   ReadOnly,
   ReadWrite,
-  WriteOnly,
+  Constant,
+};
+
+struct DirectXBinding {
+  uint32_t Register;
+  uint32_t Space;
 };
 
 struct Resource {
@@ -43,6 +48,7 @@ struct Resource {
   DataAccess Access;
   size_t Size;
   std::unique_ptr<char[]> Data;
+  DirectXBinding DXBinding;
 };
 
 struct DescriptorSet {
@@ -72,6 +78,10 @@ template <> struct MappingTraits<hlsltest::Resource> {
   static void mapping(IO &I, hlsltest::Resource &R);
 };
 
+template <> struct MappingTraits<hlsltest::DirectXBinding> {
+  static void mapping(IO &I, hlsltest::DirectXBinding &B);
+};
+
 template <> struct ScalarEnumerationTraits<hlsltest::DataFormat> {
   static void enumeration(IO &I, hlsltest::DataFormat &V) {
 #define ENUM_CASE(Val) I.enumCase(V, #Val, hlsltest::DataFormat::Val)
@@ -96,7 +106,7 @@ template <> struct ScalarEnumerationTraits<hlsltest::DataAccess> {
 #define ENUM_CASE(Val) I.enumCase(V, #Val, hlsltest::DataAccess::Val)
     ENUM_CASE(ReadOnly);
     ENUM_CASE(ReadWrite);
-    ENUM_CASE(WriteOnly);
+    ENUM_CASE(Constant);
 #undef ENUM_CASE
   }
 };
