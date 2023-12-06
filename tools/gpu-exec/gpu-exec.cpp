@@ -50,6 +50,7 @@ int main(int ArgC, char **ArgV) {
 
   ExitOnError ExitOnErr("gpu-exec: error: ");
   ExitOnErr(Device::initialize());
+  return 1;
 
   std::unique_ptr<MemoryBuffer> ShaderBuf = readFile(InputShader);
 

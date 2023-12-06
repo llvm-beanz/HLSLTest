@@ -32,8 +32,15 @@ enum class DataFormat {
   Float64
 };
 
+enum class DataAccess {
+  ReadOnly,
+  ReadWrite,
+  WriteOnly,
+};
+
 struct Resource {
   DataFormat Format;
+  DataAccess Access;
   size_t Size;
   std::unique_ptr<char[]> Data;
 };
@@ -80,6 +87,17 @@ template <> struct ScalarEnumerationTraits<hlsltest::DataFormat> {
     ENUM_CASE(Int64);
     ENUM_CASE(Float32);
     ENUM_CASE(Float64);
+#undef ENUM_CASE
+  }
+};
+
+template <> struct ScalarEnumerationTraits<hlsltest::DataAccess> {
+  static void enumeration(IO &I, hlsltest::DataAccess &V) {
+#define ENUM_CASE(Val) I.enumCase(V, #Val, hlsltest::DataAccess::Val)
+    ENUM_CASE(ReadOnly);
+    ENUM_CASE(ReadWrite);
+    ENUM_CASE(WriteOnly);
+#undef ENUM_CASE
   }
 };
 } // namespace yaml

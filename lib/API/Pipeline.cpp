@@ -25,6 +25,7 @@ void MappingTraits<hlsltest::DescriptorSet>::mapping(
 }
 
 void MappingTraits<hlsltest::Resource>::mapping(IO &I, hlsltest::Resource &R) {
+  I.mapRequired("Access", R.Access);
   I.mapRequired("Format", R.Format);
   switch (R.Format) {
 #define DATA_CASE(Enum, Type)                                                  \
