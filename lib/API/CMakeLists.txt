@@ -11,6 +11,7 @@ endif()
 add_hlsl_library(API
   Capabilities.cpp
   Device.cpp
+  Pipeline.cpp
   ${api_sources})
 
 target_include_directories(HLSLTestAPI SYSTEM BEFORE
