@@ -34,6 +34,7 @@ enum class DataFormat {
 
 struct Resource {
   DataFormat Format;
+  size_t Size;
   std::unique_ptr<char[]> Data;
 };
 

@@ -55,6 +55,7 @@ public:
   ~DXDevice() override = default;
 
   llvm::StringRef getAPIName() const override { return "DirectX"; }
+  GPUAPI getAPI() const override { return GPUAPI::DirectX; }
 
   static llvm::Expected<DXDevice> Create(CComPtr<IDXGIAdapter1> Adapter) {
     CComPtr<ID3D12Device> Device;

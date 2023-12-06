@@ -35,6 +35,7 @@ public:
   ~VKDevice() override = default;
 
   llvm::StringRef getAPIName() const override { return "Vulkan"; }
+  GPUAPI getAPI() const override { return GPUAPI::Vulkan; }
 
   const Capabilities &getCapabilities() override {
     if (Caps.empty())

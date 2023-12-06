@@ -12,6 +12,7 @@
 #ifndef HLSLTEST_API_DEVICE_H
 #define HLSLTEST_API_DEVICE_H
 
+#include "HLSLTest/API/API.h"
 #include "HLSLTest/API/Capabilities.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/StringRef.h"
@@ -28,6 +29,8 @@ protected:
 public:
   virtual const Capabilities &getCapabilities() = 0;
   virtual llvm::StringRef getAPIName() const = 0;
+  virtual GPUAPI getAPI() const = 0;
+
   virtual ~Device() = 0;
 
   llvm::StringRef getDescription() const { return Description; }
