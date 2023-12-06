@@ -91,6 +91,10 @@ public:
 
 #include "DXFeatures.def"
   }
+
+  llvm::Error executePipeline(Pipeline &P) override {
+    return llvm::Error::success();
+  }
 };
 
 class DirectXContext {

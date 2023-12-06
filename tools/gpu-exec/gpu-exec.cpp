@@ -75,6 +75,9 @@ int main(int ArgC, char **ArgV) {
   for (const auto &D : Device::devices()) {
     if (D->getAPI() != APIToUse)
       continue;
+    ExitOnErr(D->executePipeline(PipelineDesc));
+    return 0;
   }
-  return 0;
+  errs() << "No device available.";
+  return 1;
 }

@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "HLSLTest/API/Device.h"
+#include "HLSLTest/API/Pipeline.h"
 #include "llvm/Support/Error.h"
 
 #include <memory>
@@ -51,6 +52,10 @@ public:
   Caps.insert(                                                                 \
       std::make_pair(#Name, make_capability<bool>(#Name, Features.Name)));
 #include "VKFeatures.def"
+  }
+
+  llvm::Error executePipeline(Pipeline &P) override {
+    return llvm::Error::success();
   }
 };
 
