@@ -16,18 +16,18 @@ SHADER_MODEL_ENUM(SM_6_8, D3D_SHADER_MODEL_6_8, 0x68)
 #endif
 
 #ifdef D3D_FEATURE_ENUM
-D3D_FEATURE_ENUM(directx::ShaderModel, D3D_SHADER_MODELODEL, HighestShaderModel, "Highest supported Shader Model")
+D3D_FEATURE_ENUM(directx::ShaderModel, D3D_SHADER_MODELODEL, HighestShaderModel)
 #undef D3D_FEATURE_ENUM
 #endif
 
 #ifdef D3D_FEATURE_BOOL
-D3D_FEATURE_BOOL(WaveOps, "Wave operations")
+D3D_FEATURE_BOOL(WaveOps)
 #undef D3D_FEATURE_BOOL
 #endif
 
 #ifdef D3D_FEATURE_UINT
-D3D_FEATURE_UINT(WaveLaneCountMin, "Wave minimum lane count")
-D3D_FEATURE_UINT(WaveLaneCountMax, "Wave maximum lane count")
-D3D_FEATURE_UINT(TotalLaneCount, "Wave total lane count")
+D3D_FEATURE_UINT(WaveLaneCountMin)
+D3D_FEATURE_UINT(WaveLaneCountMax)
+D3D_FEATURE_UINT(TotalLaneCount)
 #undef D3D_FEATURE_UINT
 #endif

@@ -80,11 +80,11 @@ public:
     CD3DX12FeatureSupport Features;
     Features.Init(Device);
 
-#define D3D_FEATURE_BOOL(Name, Desc)                                           \
+#define D3D_FEATURE_BOOL(Name)                                           \
   Caps.insert(                                                                 \
       std::make_pair(#Name, make_capability<bool>(#Name, Features.Name())));
 
-#define D3D_FEATURE_UINT(Name, Desc)                                           \
+#define D3D_FEATURE_UINT(Name)                                           \
   Caps.insert(std::make_pair(                                                  \
       #Name, make_capability<uint32_t>(#Name, Features.Name())));
 
