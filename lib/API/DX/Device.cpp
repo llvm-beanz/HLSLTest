@@ -30,7 +30,6 @@
 #include <codecvt>
 #include <locale>
 
-
 using namespace hlsltest;
 namespace {
 
@@ -96,11 +95,13 @@ public:
 
   llvm::Expected<CComPtr<ID3D12RootSignature>>
   createRootSignature(Pipeline &P) {
+    std::vector<D3D12_ROOT_PARAMETER> RootParams;
     uint32_t DescriptorCount = 0;
     for (auto &D : P.Sets)
       DescriptorCount += D.Resources.size();
     std::unique_ptr<D3D12_DESCRIPTOR_RANGE[]> Ranges =
-        std::unique_ptr<D3D12_DESCRIPTOR_RANGE[]>(new D3D12_DESCRIPTOR_RANGE[DescriptorCount]);
+        std::unique_ptr<D3D12_DESCRIPTOR_RANGE[]>(
+            new D3D12_DESCRIPTOR_RANGE[DescriptorCount]);
 
     uint32_t RangeIdx = 0;
     for (const auto &D : P.Sets) {
@@ -113,8 +114,36 @@ public:
             DescriptorIdx;
         RangeIdx++;
       }
+      if (D.Resources.size() > 0)
+        RootParams.push_back(
+            D3D12_ROOT_PARAMETER{D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+                                 {D3D12_ROOT_DESCRIPTOR_TABLE{
+                                     static_cast<uint32_t>(D.Resources.size()),
+                                     &Ranges[RangeIdx - 1]}},
+                                 D3D12_SHADER_VISIBILITY_ALL});
     }
-    return nullptr;
+
+    D3D12_ROOT_SIGNATURE_DESC Desc = D3D12_ROOT_SIGNATURE_DESC{
+        static_cast<uint32_t>(RootParams.size()), RootParams.data(), 0, nullptr,
+        D3D12_ROOT_SIGNATURE_FLAG_NONE};
+
+    CComPtr<ID3DBlob> Signature;
+    CComPtr<ID3DBlob> Error;
+    if (auto Err = HR::toError(
+            D3D12SerializeRootSignature(&Desc, D3D_ROOT_SIGNATURE_VERSION_1,
+                                        &Signature, &Error),
+            "Failed to seialize root signature."))
+      return Err;
+
+    CComPtr<ID3D12RootSignature> RootSignature;
+    if (auto Err = HR::toError(Device->CreateRootSignature(
+                                   0, Signature->GetBufferPointer(),
+                                   Signature->GetBufferSize(),
+                                   IID_ID3D12RootSignature, reinterpret_cast<void**>(&RootSignature)),
+                               "Failed to create root signature."))
+      return Err;
+
+    return RootSignature;
   }
 
   llvm::Error executePipeline(Pipeline &P) override {
