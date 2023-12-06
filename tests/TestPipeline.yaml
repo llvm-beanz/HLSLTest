@@ -1,0 +1,16 @@
+---
+DescriptorSets:
+  - Resources:
+    - Access: ReadOnly
+      Format: Float32
+      Data: [ 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+      DirectXBinding:
+        - Register: 0 # implies t0 due to Access being RO
+          Space: 0
+    - Access: ReadWrite
+      Format: Float32
+      Data: [ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      DirectXBinding:
+        - Register: 0
+          Space: 0
+...
