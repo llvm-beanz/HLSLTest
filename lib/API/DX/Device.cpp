@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <atlbase.h>
+#include <combaseapi.h>
 #include <d3d12.h>
 #include <d3dx12.h>
 #include <dxgi1_4.h>
@@ -49,6 +50,9 @@ private:
     CComPtr<ID3D12RootSignature> RootSig;
     CComPtr<ID3D12DescriptorHeap> DescHeap;
     CComPtr<ID3D12PipelineState> PSO;
+    CComPtr<ID3D12CommandQueue> Queue;
+    CComPtr<ID3D12CommandAllocator> Allocator;
+    CComPtr<ID3D12CommandList> CmdList;
   };
 
 public:
@@ -197,6 +201,27 @@ public:
     return llvm::Error::success();
   }
 
+  llvm::Error createCommandStructures(InvocationState &IS) {
+    const D3D12_COMMAND_QUEUE_DESC Desc = {D3D12_COMMAND_LIST_TYPE_DIRECT, 0,
+                                           D3D12_COMMAND_QUEUE_FLAG_NONE, 0};
+    if (auto Err = HR::toError(
+            Device->CreateCommandQueue(&Desc, IID_PPV_ARGS(&IS.Queue)),
+            "Failed to create command queue."))
+      return Err;
+    if (auto Err = HR::toError(
+            Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+                                           IID_PPV_ARGS(&IS.Allocator)),
+            "Failed to create command allocator."))
+      return Err;
+    if (auto Err =
+            HR::toError(Device->CreateCommandList(
+                            0, D3D12_COMMAND_LIST_TYPE_DIRECT, IS.Allocator,
+                            nullptr, IID_PPV_ARGS(&IS.CmdList)),
+                        "Failed to create command list."))
+      return Err;
+    return llvm::Error::success();
+  }
+
   llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) override {
     InvocationState State;
     llvm::outs() << "Configuring execution on device: " << Description << "\n";
@@ -209,6 +234,9 @@ public:
     if (auto Err = createPSO(P, Program, State))
       return Err;
     llvm::outs() << "PSO created.\n";
+    if (auto Err = createCommandStructures(State))
+      return Err;
+    llvm::outs() << "Command structures created.\n";
     return llvm::Error::success();
   }
 };
