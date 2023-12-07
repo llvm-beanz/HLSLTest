@@ -14,6 +14,7 @@
 #include <d3d12.h>
 #include <d3dx12.h>
 #include <dxgi1_4.h>
+#include <dxgiformat.h>
 
 // The windows headers define these macros which conflict with the C++ standard
 // library. Undefining them before including any LLVM C++ code prevents errors.
@@ -52,7 +53,11 @@ private:
     CComPtr<ID3D12PipelineState> PSO;
     CComPtr<ID3D12CommandQueue> Queue;
     CComPtr<ID3D12CommandAllocator> Allocator;
-    CComPtr<ID3D12CommandList> CmdList;
+    CComPtr<ID3D12GraphicsCommandList> CmdList;
+    CComPtr<ID3D12Fence> Fence;
+    HANDLE Event;
+
+    llvm::SmallVector<CComPtr<ID3D12Resource>> Resources;
   };
 
 public:
@@ -222,6 +227,161 @@ public:
     return llvm::Error::success();
   }
 
+  void addResourceUploadCommands(Resource &R, InvocationState &IS,
+                                 CComPtr<ID3D12Resource> Destination,
+                                 CComPtr<ID3D12Resource> Source) {
+    addUploadBeginBarrier(IS, Destination);
+    IS.CmdList->CopyBufferRegion(Destination, 0, Source, 0, R.Size);
+    addUploadEndBarrier(IS, Destination, R.Access == DataAccess::ReadOnly);
+  }
+
+  llvm::Error createSRV(Resource &R, InvocationState &IS,
+                        const uint32_t HeapIdx) {
+    return llvm::createStringError(std::errc::not_supported,
+                                   "DXDevice::createSRV not supported.");
+  }
+
+  llvm::Error createUAV(Resource &R, InvocationState &IS,
+                        const uint32_t HeapIdx) {
+    CComPtr<ID3D12Resource> Buffer;
+    CComPtr<ID3D12Resource> UploadBuffer;
+
+    const D3D12_HEAP_PROPERTIES HeapProp = {D3D12_HEAP_TYPE_DEFAULT,
+                                            D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+                                            D3D12_MEMORY_POOL_UNKNOWN, 1, 1};
+    const D3D12_RESOURCE_DESC ResDesc = {
+        D3D12_RESOURCE_DIMENSION_BUFFER,
+        0,
+        R.Size,
+        1,
+        1,
+        1,
+        DXGI_FORMAT_UNKNOWN,
+        {1, 0},
+        D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+        D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS};
+
+    if (auto Err = HR::toError(Device->CreateCommittedResource(
+                                   &HeapProp, D3D12_HEAP_FLAG_NONE, &ResDesc,
+                                   D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                   IID_PPV_ARGS(&Buffer)),
+                               "Failed to create committed resource (buffer)."))
+      return Err;
+
+    const D3D12_HEAP_PROPERTIES UploadHeapProp = {
+        D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+        D3D12_MEMORY_POOL_UNKNOWN, 1, 1};
+    const D3D12_RESOURCE_DESC UploadResDesc = {D3D12_RESOURCE_DIMENSION_BUFFER,
+                                               0,
+                                               R.Size,
+                                               1,
+                                               1,
+                                               1,
+                                               DXGI_FORMAT_UNKNOWN,
+                                               {1, 0},
+                                               D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+                                               D3D12_RESOURCE_FLAG_NONE};
+
+    if (auto Err =
+            HR::toError(Device->CreateCommittedResource(
+                            &UploadHeapProp, D3D12_HEAP_FLAG_NONE,
+                            &UploadResDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
+                            nullptr, IID_PPV_ARGS(&UploadBuffer)),
+                        "Failed to create committed resource (upload buffer)."))
+      return Err;
+
+    // Initialize the UAV data
+    void *ResDataPtr = nullptr;
+    if (auto Err = HR::toError(UploadBuffer->Map(0, nullptr, &ResDataPtr),
+                               "Failed to acquire UAV data pointer."))
+      return Err;
+    memcpy(ResDataPtr, R.Data.get(), R.Size);
+    UploadBuffer->Unmap(0, nullptr);
+
+    addResourceUploadCommands(R, IS, Buffer, UploadBuffer);
+
+    const uint32_t EltSize = R.getElementSize();
+    const uint32_t NumElts = R.Size / EltSize;
+    const D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {
+        DXGI_FORMAT_UNKNOWN,
+        D3D12_UAV_DIMENSION_BUFFER,
+        {D3D12_BUFFER_UAV{0, NumElts, EltSize, 0, D3D12_BUFFER_UAV_FLAG_NONE}}};
+
+    D3D12_CPU_DESCRIPTOR_HANDLE UAVHandle =
+        IS.DescHeap->GetCPUDescriptorHandleForHeapStart();
+    UAVHandle.ptr += HeapIdx * Device->GetDescriptorHandleIncrementSize(
+                                   D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    Device->CreateUnorderedAccessView(Buffer, nullptr, &UAVDesc, UAVHandle);
+
+    IS.Resources.push_back(Buffer);
+    IS.Resources.push_back(UploadBuffer);
+    return llvm::Error::success();
+  }
+
+  llvm::Error createCBV(Resource &R, InvocationState &IS,
+                        const uint32_t HeapIdx) {
+    return llvm::createStringError(std::errc::not_supported,
+                                   "DXDevice::createSRV not supported.");
+  }
+
+  llvm::Error createBuffers(Pipeline &P, InvocationState &IS) {
+    uint32_t HeapIndex = 0;
+    for (auto &D : P.Sets) {
+      for (auto &R : D.Resources) {
+        switch (R.Access) {
+        case DataAccess::ReadOnly:
+          if (auto Err = createSRV(R, IS, HeapIndex++))
+            return Err;
+          break;
+        case DataAccess::ReadWrite:
+          if (auto Err = createUAV(R, IS, HeapIndex++))
+            return Err;
+          break;
+        case DataAccess::Constant:
+          if (auto Err = createCBV(R, IS, HeapIndex++))
+            return Err;
+          break;
+        }
+      }
+    }
+    return llvm::Error::success();
+  }
+
+  void addUploadBeginBarrier(InvocationState &IS, CComPtr<ID3D12Resource> R) {
+    const D3D12_RESOURCE_BARRIER BeginBarrier = {
+        D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+        D3D12_RESOURCE_BARRIER_FLAG_NONE,
+        {D3D12_RESOURCE_TRANSITION_BARRIER{
+            R, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+            D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST}}};
+    IS.CmdList->ResourceBarrier(1, &BeginBarrier);
+  }
+
+  void addUploadEndBarrier(InvocationState &IS, CComPtr<ID3D12Resource> R,
+                           bool IsUAV) {
+    const D3D12_RESOURCE_BARRIER BeginBarrier = {
+        D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+        D3D12_RESOURCE_BARRIER_FLAG_NONE,
+        {D3D12_RESOURCE_TRANSITION_BARRIER{
+            R, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+            D3D12_RESOURCE_STATE_COMMON,
+            IsUAV ? D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+                  : D3D12_RESOURCE_STATE_GENERIC_READ}}};
+    IS.CmdList->ResourceBarrier(1, &BeginBarrier);
+  }
+
+  llvm::Error createEvent(InvocationState &IS) {
+    if (auto Err = HR::toError(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE,
+                                                   IID_PPV_ARGS(&IS.Fence)),
+                               "Failed to create fence."))
+      return Err;
+    IS.Event = CreateEventA(nullptr, false, false, nullptr);
+    if (!IS.Event)
+      return llvm::createStringError(std::errc::device_or_resource_busy,
+                                     "Failed to create event.");
+    return llvm::Error::success();
+  }
+
   llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) override {
     InvocationState State;
     llvm::outs() << "Configuring execution on device: " << Description << "\n";
@@ -237,6 +397,13 @@ public:
     if (auto Err = createCommandStructures(State))
       return Err;
     llvm::outs() << "Command structures created.\n";
+    if (auto Err = createBuffers(P, State))
+      return Err;
+    llvm::outs() << "Buffers created.\n";
+    if (auto Err = createEvent(State))
+      return Err;
+    llvm::outs() << "Event prepared.\n";
+
     return llvm::Error::success();
   }
 };

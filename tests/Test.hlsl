@@ -1,5 +1,5 @@
-Buffer<float> In : register(t0);
-RWBuffer<float> Out : register(u0);
+RWBuffer<float> In : register(u0);
+RWBuffer<float> Out : register(u1);
 
 [numthreads(8,1,1)]
 void main(uint GID : SV_GroupIndex) {
