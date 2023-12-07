@@ -45,9 +45,10 @@ private:
   CComPtr<ID3D12Device> Device;
   Capabilities Caps;
 
-  struct PipelineState {
+  struct InvocationState {
     CComPtr<ID3D12RootSignature> RootSig;
     CComPtr<ID3D12DescriptorHeap> DescHeap;
+    CComPtr<ID3D12PipelineState> PSO;
   };
 
 public:
@@ -98,7 +99,7 @@ public:
 #include "DXFeatures.def"
   }
 
-  llvm::Error createRootSignature(Pipeline &P, PipelineState &PS) {
+  llvm::Error createRootSignature(Pipeline &P, InvocationState &State) {
     std::vector<D3D12_ROOT_PARAMETER> RootParams;
     uint32_t DescriptorCount = P.getDescriptorCount();
     std::unique_ptr<D3D12_DESCRIPTOR_RANGE[]> Ranges =
@@ -158,34 +159,56 @@ public:
     if (auto Err = HR::toError(
             Device->CreateRootSignature(0, Signature->GetBufferPointer(),
                                         Signature->GetBufferSize(),
-                                        IID_PPV_ARGS(&PS.RootSig)),
+                                        IID_PPV_ARGS(&State.RootSig)),
             "Failed to create root signature."))
       return Err;
 
     return llvm::Error::success();
   }
 
-  llvm::Error createDescriptorHeap(Pipeline &P, PipelineState &PS) {
+  llvm::Error createDescriptorHeap(Pipeline &P, InvocationState &State) {
     const D3D12_DESCRIPTOR_HEAP_DESC HeapDesc = {
         D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, P.getDescriptorCount(),
         D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0};
-    if (auto Err = HR::toError(
-            Device->CreateDescriptorHeap(&HeapDesc, IID_PPV_ARGS(&PS.DescHeap)),
-            "Failed to create descriptor heap."))
+    if (auto Err = HR::toError(Device->CreateDescriptorHeap(
+                                   &HeapDesc, IID_PPV_ARGS(&State.DescHeap)),
+                               "Failed to create descriptor heap."))
       return Err;
-    Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    Device->GetDescriptorHandleIncrementSize(
+        D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    return llvm::Error::success();
+  }
+
+  llvm::Error createPSO(Pipeline &P, llvm::StringRef DXIL,
+                        InvocationState &State) {
+    const D3D12_COMPUTE_PIPELINE_STATE_DESC Desc = {
+        State.RootSig,
+        {DXIL.data(), DXIL.size()},
+        0,
+        {
+            nullptr,
+            0,
+        },
+        D3D12_PIPELINE_STATE_FLAG_NONE};
+    if (auto Err = HR::toError(
+            Device->CreateComputePipelineState(&Desc, IID_PPV_ARGS(&State.PSO)),
+            "Failed to create PSO."))
+      return Err;
     return llvm::Error::success();
   }
 
   llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) override {
-    PipelineState PS;
+    InvocationState State;
     llvm::outs() << "Configuring execution on device: " << Description << "\n";
-    if (auto Err = createRootSignature(P, PS))
+    if (auto Err = createRootSignature(P, State))
       return Err;
     llvm::outs() << "RootSignature created.\n";
-    if (auto Err = createDescriptorHeap(P, PS))
+    if (auto Err = createDescriptorHeap(P, State))
       return Err;
     llvm::outs() << "Descriptor heap created.\n";
+    if (auto Err = createPSO(P, Program, State))
+      return Err;
+    llvm::outs() << "PSO created.\n";
     return llvm::Error::success();
   }
 };
