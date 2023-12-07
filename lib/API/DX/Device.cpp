@@ -106,7 +106,19 @@ public:
     uint32_t RangeIdx = 0;
     for (const auto &D : P.Sets) {
       uint32_t DescriptorIdx = 0;
+      uint32_t StartRangeIdx = RangeIdx;
       for (const auto &R : D.Resources) {
+        switch (R.Access) {
+        case DataAccess::ReadOnly:
+          Ranges.get()[RangeIdx].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+          break;
+        case DataAccess::ReadWrite:
+          Ranges.get()[RangeIdx].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+          break;
+        case DataAccess::Constant:
+          Ranges.get()[RangeIdx].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+          break;
+        }
         Ranges.get()[RangeIdx].NumDescriptors = 1;
         Ranges.get()[RangeIdx].BaseShaderRegister = R.DXBinding.Register;
         Ranges.get()[RangeIdx].RegisterSpace = R.DXBinding.Space;
@@ -119,7 +131,7 @@ public:
             D3D12_ROOT_PARAMETER{D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
                                  {D3D12_ROOT_DESCRIPTOR_TABLE{
                                      static_cast<uint32_t>(D.Resources.size()),
-                                     &Ranges[RangeIdx - 1]}},
+                                     &Ranges[StartRangeIdx]}},
                                  D3D12_SHADER_VISIBILITY_ALL});
     }
 
@@ -132,8 +144,14 @@ public:
     if (auto Err = HR::toError(
             D3D12SerializeRootSignature(&Desc, D3D_ROOT_SIGNATURE_VERSION_1,
                                         &Signature, &Error),
-            "Failed to seialize root signature."))
-      return Err;
+            "Failed to seialize root signature.")) {
+      std::string Msg =
+          std::string(reinterpret_cast<char *>(Error->GetBufferPointer()),
+                      Error->GetBufferSize() / sizeof(char));
+      return joinErrors(
+          std::move(Err),
+          llvm::createStringError(std::errc::protocol_error, Msg.c_str()));
+    }
 
     CComPtr<ID3D12RootSignature> RootSignature;
     if (auto Err = HR::toError(
