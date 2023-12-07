@@ -382,6 +382,22 @@ public:
     return llvm::Error::success();
   }
 
+  llvm::Error executeCommandList(InvocationState &IS) {
+    if (auto Err = HR::toError(IS.CmdList->Close(), "Failed to close command list."))
+      return Err;
+    ID3D12CommandList *CmdLists[] = { IS.CmdList};
+    IS.Queue->ExecuteCommandLists(1, CmdLists);
+
+    if(auto Err = HR::toError(IS.Queue->Signal(IS.Fence, 1), "Failed to add signal."))
+      return Err;
+
+    if (auto Err = HR::toError(Fence->SetEventOnCompletion(1, IS.Event), "Failed to register end event."))
+      return Err;
+
+    WaitForSingleObject(IS.Event, INFINITE);
+    return llvm::Error::success();
+  }
+
   llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) override {
     InvocationState State;
     llvm::outs() << "Configuring execution on device: " << Description << "\n";
@@ -403,6 +419,9 @@ public:
     if (auto Err = createEvent(State))
       return Err;
     llvm::outs() << "Event prepared.\n";
+    if (auto Err = executeCommandList(State))
+      return Err;
+    llvm::outs() << "Commands executed\n";
 
     return llvm::Error::success();
   }
