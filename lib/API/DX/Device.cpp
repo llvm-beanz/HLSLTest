@@ -136,17 +136,22 @@ public:
       return Err;
 
     CComPtr<ID3D12RootSignature> RootSignature;
-    if (auto Err = HR::toError(Device->CreateRootSignature(
-                                   0, Signature->GetBufferPointer(),
-                                   Signature->GetBufferSize(),
-                                   IID_ID3D12RootSignature, reinterpret_cast<void**>(&RootSignature)),
-                               "Failed to create root signature."))
+    if (auto Err = HR::toError(
+            Device->CreateRootSignature(0, Signature->GetBufferPointer(),
+                                        Signature->GetBufferSize(),
+                                        IID_PPV_ARGS(&RootSignature)),
+            "Failed to create root signature."))
       return Err;
 
     return RootSignature;
   }
 
   llvm::Error executePipeline(Pipeline &P) override {
+    llvm::outs() << "Configuring execution on device: " << Description << "\n";
+    auto ExRootSig = createRootSignature(P);
+    if (!ExRootSig)
+      return ExRootSig.takeError();
+    llvm::outs() << "RootSignature created.\n";
     return llvm::Error::success();
   }
 };

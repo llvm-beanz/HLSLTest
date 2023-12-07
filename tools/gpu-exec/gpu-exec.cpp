@@ -50,7 +50,6 @@ int main(int ArgC, char **ArgV) {
 
   ExitOnError ExitOnErr("gpu-exec: error: ");
   ExitOnErr(Device::initialize());
-  return 1;
 
   std::unique_ptr<MemoryBuffer> ShaderBuf = readFile(InputShader);
 
@@ -64,14 +63,15 @@ int main(int ArgC, char **ArgV) {
   }
 
   if (APIToUse == GPUAPI::Unknown)
-    ExitOnErr(llvm::createStringError(
-        std::errc::executable_format_error,
-        "Could not identify API to execute provided shader"));
+    ExitOnErr(
+        createStringError(std::errc::executable_format_error,
+                          "Could not identify API to execute provided shader"));
 
   std::unique_ptr<MemoryBuffer> PipelineBuf = readFile(InputPipeline);
   Pipeline PipelineDesc;
   yaml::Input YIn(PipelineBuf->getBuffer());
   YIn >> PipelineDesc;
+  ExitOnErr(llvm::errorCodeToError(YIn.error()));
 
   for (const auto &D : Device::devices()) {
     if (D->getAPI() != APIToUse)
