@@ -96,9 +96,7 @@ public:
   llvm::Expected<CComPtr<ID3D12RootSignature>>
   createRootSignature(Pipeline &P) {
     std::vector<D3D12_ROOT_PARAMETER> RootParams;
-    uint32_t DescriptorCount = 0;
-    for (auto &D : P.Sets)
-      DescriptorCount += D.Resources.size();
+    uint32_t DescriptorCount = P.getDescriptorCount();
     std::unique_ptr<D3D12_DESCRIPTOR_RANGE[]> Ranges =
         std::unique_ptr<D3D12_DESCRIPTOR_RANGE[]>(
             new D3D12_DESCRIPTOR_RANGE[DescriptorCount]);

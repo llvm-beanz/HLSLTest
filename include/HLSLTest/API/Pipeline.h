@@ -57,6 +57,13 @@ struct DescriptorSet {
 
 struct Pipeline {
   llvm::SmallVector<DescriptorSet> Sets;
+
+  uint32_t getDescriptorCount() const {
+    uint32_t DescriptorCount = 0;
+    for (auto &D : Sets)
+      DescriptorCount += D.Resources.size();
+    return DescriptorCount;
+  }
 };
 } // namespace hlsltest
 
