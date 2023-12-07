@@ -76,7 +76,7 @@ int main(int ArgC, char **ArgV) {
   for (const auto &D : Device::devices()) {
     if (D->getAPI() != APIToUse)
       continue;
-    ExitOnErr(D->executePipeline(PipelineDesc));
+    ExitOnErr(D->executeProgram(ShaderBuf->getBuffer(), PipelineDesc));
     return 0;
   }
   errs() << "No device available.";

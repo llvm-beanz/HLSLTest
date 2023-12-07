@@ -29,7 +29,8 @@ private:
 public:
   VKDevice(VkPhysicalDevice D) : Device(D) {
     vkGetPhysicalDeviceProperties(Device, &Props);
-    Description = llvm::StringRef(Props.deviceName, VK_MAX_PHYSICAL_DEVICE_NAME_SIZE);
+    Description =
+        llvm::StringRef(Props.deviceName, VK_MAX_PHYSICAL_DEVICE_NAME_SIZE);
   }
   VKDevice(const VKDevice &) = default;
 
@@ -54,8 +55,9 @@ public:
 #include "VKFeatures.def"
   }
 
-  llvm::Error executePipeline(Pipeline &P) override {
-    return llvm::Error::success();
+  llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) override {
+    return llvm::createStringError(std::errc::not_supported,
+                                   "VKDevice::executeProgram not supported.");
   }
 };
 

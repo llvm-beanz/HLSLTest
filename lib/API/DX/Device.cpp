@@ -45,6 +45,11 @@ private:
   CComPtr<ID3D12Device> Device;
   Capabilities Caps;
 
+  struct PipelineState {
+    CComPtr<ID3D12RootSignature> RootSig;
+    CComPtr<ID3D12DescriptorHeap> DescHeap;
+  };
+
 public:
   DXDevice(CComPtr<IDXGIAdapter1> A, CComPtr<ID3D12Device> D,
            DXGI_ADAPTER_DESC1 Desc)
@@ -93,8 +98,7 @@ public:
 #include "DXFeatures.def"
   }
 
-  llvm::Expected<CComPtr<ID3D12RootSignature>>
-  createRootSignature(Pipeline &P) {
+  llvm::Error createRootSignature(Pipeline &P, PipelineState &PS) {
     std::vector<D3D12_ROOT_PARAMETER> RootParams;
     uint32_t DescriptorCount = P.getDescriptorCount();
     std::unique_ptr<D3D12_DESCRIPTOR_RANGE[]> Ranges =
@@ -151,23 +155,37 @@ public:
           llvm::createStringError(std::errc::protocol_error, Msg.c_str()));
     }
 
-    CComPtr<ID3D12RootSignature> RootSignature;
     if (auto Err = HR::toError(
             Device->CreateRootSignature(0, Signature->GetBufferPointer(),
                                         Signature->GetBufferSize(),
-                                        IID_PPV_ARGS(&RootSignature)),
+                                        IID_PPV_ARGS(&PS.RootSig)),
             "Failed to create root signature."))
       return Err;
 
-    return RootSignature;
+    return llvm::Error::success();
   }
 
-  llvm::Error executePipeline(Pipeline &P) override {
+  llvm::Error createDescriptorHeap(Pipeline &P, PipelineState &PS) {
+    const D3D12_DESCRIPTOR_HEAP_DESC HeapDesc = {
+        D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, P.getDescriptorCount(),
+        D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0};
+    if (auto Err = HR::toError(
+            Device->CreateDescriptorHeap(&HeapDesc, IID_PPV_ARGS(&PS.DescHeap)),
+            "Failed to create descriptor heap."))
+      return Err;
+    Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    return llvm::Error::success();
+  }
+
+  llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) override {
+    PipelineState PS;
     llvm::outs() << "Configuring execution on device: " << Description << "\n";
-    auto ExRootSig = createRootSignature(P);
-    if (!ExRootSig)
-      return ExRootSig.takeError();
+    if (auto Err = createRootSignature(P, PS))
+      return Err;
     llvm::outs() << "RootSignature created.\n";
+    if (auto Err = createDescriptorHeap(P, PS))
+      return Err;
+    llvm::outs() << "Descriptor heap created.\n";
     return llvm::Error::success();
   }
 };
