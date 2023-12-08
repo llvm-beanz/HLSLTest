@@ -27,7 +27,7 @@
 #include "HLSLTest/API/Pipeline.h"
 #include "HLSLTest/WinError.h"
 
-
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 
@@ -36,10 +36,8 @@
 
 using namespace hlsltest;
 
-template<>
-char CapabilityValueEnum<directx::ShaderModel>::ID = 0;
-template<>
-char CapabilityValueEnum<directx::RootSignature>::ID = 0;
+template <> char CapabilityValueEnum<directx::ShaderModel>::ID = 0;
+template <> char CapabilityValueEnum<directx::RootSignature>::ID = 0;
 
 namespace {
 
@@ -66,6 +64,10 @@ private:
     HANDLE Event;
 
     llvm::SmallVector<CComPtr<ID3D12Resource>> Resources;
+    using Binding = std::pair<uint32_t, uint32_t>;
+    using ResourcePair =
+        std::pair<CComPtr<ID3D12Resource>, CComPtr<ID3D12Resource>>;
+    llvm::DenseMap<Binding, ResourcePair> Outputs;
   };
 
 public:
@@ -115,8 +117,8 @@ public:
 
 #define D3D_FEATURE_ENUM(NewEnum, Name)                                        \
   Caps.insert(std::make_pair(                                                  \
-      #Name,                                                                   \
-      make_capability<NewEnum>(#Name, static_cast<NewEnum>(Features.Name()))));
+      #Name, make_capability<NewEnum>(                                         \
+                 #Name, static_cast<NewEnum>(Features.Name()))));
 
 #include "DXFeatures.def"
   }
@@ -258,6 +260,7 @@ public:
                         const uint32_t HeapIdx) {
     CComPtr<ID3D12Resource> Buffer;
     CComPtr<ID3D12Resource> UploadBuffer;
+    CComPtr<ID3D12Resource> ReadBackBuffer;
 
     const D3D12_HEAP_PROPERTIES HeapProp = {D3D12_HEAP_TYPE_DEFAULT,
                                             D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
@@ -303,6 +306,29 @@ public:
                         "Failed to create committed resource (upload buffer)."))
       return Err;
 
+    const D3D12_HEAP_PROPERTIES ReadBackHeapProp = {
+        D3D12_HEAP_TYPE_READBACK, D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+        D3D12_MEMORY_POOL_UNKNOWN, 1, 1};
+    const D3D12_RESOURCE_DESC ReadBackResDesc = {
+        D3D12_RESOURCE_DIMENSION_BUFFER,
+        0,
+        R.Size,
+        1,
+        1,
+        1,
+        DXGI_FORMAT_UNKNOWN,
+        {1, 0},
+        D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+        D3D12_RESOURCE_FLAG_NONE};
+
+    if (auto Err = HR::toError(
+            Device->CreateCommittedResource(
+                &ReadBackHeapProp, D3D12_HEAP_FLAG_NONE, &ReadBackResDesc,
+                D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+                IID_PPV_ARGS(&ReadBackBuffer)),
+            "Failed to create committed resource (readback buffer)."))
+      return Err;
+
     // Initialize the UAV data
     void *ResDataPtr = nullptr;
     if (auto Err = HR::toError(UploadBuffer->Map(0, nullptr, &ResDataPtr),
@@ -328,6 +354,12 @@ public:
 
     IS.Resources.push_back(Buffer);
     IS.Resources.push_back(UploadBuffer);
+
+    std::pair<uint32_t, uint32_t> Binding = {R.DXBinding.Register,
+                                             R.DXBinding.Space};
+    std::pair<CComPtr<ID3D12Resource>, CComPtr<ID3D12Resource>> SrcDstPair = {
+        Buffer, ReadBackBuffer};
+    IS.Outputs.insert(std::make_pair(Binding, SrcDstPair));
     return llvm::Error::success();
   }
 
@@ -361,18 +393,18 @@ public:
   }
 
   void addUploadBeginBarrier(InvocationState &IS, CComPtr<ID3D12Resource> R) {
-    const D3D12_RESOURCE_BARRIER BeginBarrier = {
+    const D3D12_RESOURCE_BARRIER Barrier = {
         D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
         D3D12_RESOURCE_BARRIER_FLAG_NONE,
         {D3D12_RESOURCE_TRANSITION_BARRIER{
             R, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
             D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST}}};
-    IS.CmdList->ResourceBarrier(1, &BeginBarrier);
+    IS.CmdList->ResourceBarrier(1, &Barrier);
   }
 
   void addUploadEndBarrier(InvocationState &IS, CComPtr<ID3D12Resource> R,
                            bool IsUAV) {
-    const D3D12_RESOURCE_BARRIER BeginBarrier = {
+    const D3D12_RESOURCE_BARRIER Barrier = {
         D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
         D3D12_RESOURCE_BARRIER_FLAG_NONE,
         {D3D12_RESOURCE_TRANSITION_BARRIER{
@@ -380,7 +412,29 @@ public:
             D3D12_RESOURCE_STATE_COMMON,
             IsUAV ? D3D12_RESOURCE_STATE_UNORDERED_ACCESS
                   : D3D12_RESOURCE_STATE_GENERIC_READ}}};
-    IS.CmdList->ResourceBarrier(1, &BeginBarrier);
+    IS.CmdList->ResourceBarrier(1, &Barrier);
+  }
+
+  void addReadbackBeginBarrier(InvocationState &IS, CComPtr<ID3D12Resource> R) {
+    const D3D12_RESOURCE_BARRIER Barrier = {
+        D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+        D3D12_RESOURCE_BARRIER_FLAG_NONE,
+        {D3D12_RESOURCE_TRANSITION_BARRIER{
+            R, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+            D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+            D3D12_RESOURCE_STATE_COPY_SOURCE}}};
+    IS.CmdList->ResourceBarrier(1, &Barrier);
+  }
+
+  void addReadbackEndBarrier(InvocationState &IS, CComPtr<ID3D12Resource> R) {
+    const D3D12_RESOURCE_BARRIER Barrier = {
+        D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+        D3D12_RESOURCE_BARRIER_FLAG_NONE,
+        {D3D12_RESOURCE_TRANSITION_BARRIER{
+            R, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+            D3D12_RESOURCE_STATE_COPY_SOURCE,
+            D3D12_RESOURCE_STATE_UNORDERED_ACCESS}}};
+    IS.CmdList->ResourceBarrier(1, &Barrier);
   }
 
   llvm::Error createEvent(InvocationState &IS) {
@@ -414,6 +468,47 @@ public:
     return llvm::Error::success();
   }
 
+  llvm::Error executeCompute(Pipeline &P, InvocationState &IS) {
+    if (auto Err =
+            HR::toError(IS.Allocator->Reset(), "Failed to reset allocator."))
+      return Err;
+    if (auto Err = HR::toError(IS.CmdList->Reset(IS.Allocator, IS.PSO),
+                               "Failed to reset command list."))
+      return Err;
+    // Commented out broken code
+    /*IS.CmdList->SetComputeRootSignature(IS.RootSig);
+
+    ID3D12DescriptorHeap *const Heaps[] = {IS.DescHeap};
+    IS.CmdList->SetDescriptorHeaps(1, Heaps);
+
+    uint32_t Inc = Device->GetDescriptorHandleIncrementSize(
+        D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        
+    uint32_t Offset = 0;
+    uint32_t Idx = 0;
+    for (auto &S : P.Sets) {
+      for (auto &R : S.Resources) {
+        (void)R; // todo: need to actually build descriptor tables.
+        D3D12_GPU_DESCRIPTOR_HANDLE Handle =
+            IS.DescHeap->GetGPUDescriptorHandleForHeapStart();
+        Handle.ptr += Offset;
+        IS.CmdList->SetComputeRootDescriptorTable(Idx++, Handle);
+        Offset += Inc;
+      }
+    }
+    IS.CmdList->Dispatch(8, 1, 1); // todo: fix this...
+
+    for (auto &Out : IS.Outputs) {
+      addReadbackBeginBarrier(IS, Out.second.first);
+      IS.CmdList->CopyResource(Out.second.second, Out.second.first);
+      addReadbackBeginBarrier(IS, Out.second.first);
+    }
+
+    IS.CmdList->Close();
+
+    return executeCommandList(IS);*/
+  }
+
   llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) override {
     InvocationState State;
     llvm::outs() << "Configuring execution on device: " << Description << "\n";
@@ -437,7 +532,10 @@ public:
     llvm::outs() << "Event prepared.\n";
     if (auto Err = executeCommandList(State))
       return Err;
-    llvm::outs() << "Commands executed\n";
+    llvm::outs() << "Preparation commands executed.\n";
+    if (auto Err = executeCompute(P, State))
+      return Err;
+    llvm::outs() << "Compute command list executed.\n";
 
     return llvm::Error::success();
   }
