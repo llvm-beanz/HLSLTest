@@ -21,10 +21,12 @@
 #undef max
 #undef min
 
+#include "DXFeatures.h"
 #include "HLSLTest/API/Capabilities.h"
 #include "HLSLTest/API/Device.h"
 #include "HLSLTest/API/Pipeline.h"
 #include "HLSLTest/WinError.h"
+
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
@@ -33,6 +35,12 @@
 #include <locale>
 
 using namespace hlsltest;
+
+template<>
+char CapabilityValueEnum<directx::ShaderModel>::ID = 0;
+template<>
+char CapabilityValueEnum<directx::RootSignature>::ID = 0;
+
 namespace {
 
 std::string StringFromWString(const std::wstring &In) {
@@ -104,6 +112,11 @@ public:
 #define D3D_FEATURE_UINT(Name)                                                 \
   Caps.insert(std::make_pair(                                                  \
       #Name, make_capability<uint32_t>(#Name, Features.Name())));
+
+#define D3D_FEATURE_ENUM(NewEnum, Name)                                        \
+  Caps.insert(std::make_pair(                                                  \
+      #Name,                                                                   \
+      make_capability<NewEnum>(#Name, static_cast<NewEnum>(Features.Name()))));
 
 #include "DXFeatures.def"
   }
@@ -383,15 +396,18 @@ public:
   }
 
   llvm::Error executeCommandList(InvocationState &IS) {
-    if (auto Err = HR::toError(IS.CmdList->Close(), "Failed to close command list."))
+    if (auto Err =
+            HR::toError(IS.CmdList->Close(), "Failed to close command list."))
       return Err;
-    ID3D12CommandList *CmdLists[] = { IS.CmdList};
+    ID3D12CommandList *CmdLists[] = {IS.CmdList};
     IS.Queue->ExecuteCommandLists(1, CmdLists);
 
-    if(auto Err = HR::toError(IS.Queue->Signal(IS.Fence, 1), "Failed to add signal."))
+    if (auto Err =
+            HR::toError(IS.Queue->Signal(IS.Fence, 1), "Failed to add signal."))
       return Err;
 
-    if (auto Err = HR::toError(Fence->SetEventOnCompletion(1, IS.Event), "Failed to register end event."))
+    if (auto Err = HR::toError(IS.Fence->SetEventOnCompletion(1, IS.Event),
+                               "Failed to register end event."))
       return Err;
 
     WaitForSingleObject(IS.Event, INFINITE);

@@ -4,7 +4,7 @@ if (HLSLTEST_ENABLE_VULKAN)
 endif()
 
 if (HLSLTEST_ENABLE_D3D12)
-  list(APPEND api_sources DX/Device.cpp)
+  list(APPEND api_sources DX/Device.cpp DX/DXFeatures.cpp)
   list(APPEND api_libraries ${D3D12_LIBRARIES})
 endif()
 

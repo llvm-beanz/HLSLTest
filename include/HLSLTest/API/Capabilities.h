@@ -98,6 +98,16 @@ template <> struct CapabilityTypeHelper<uint32_t> {
 template <typename T>
 using CapabilityType = typename detail::CapabilityTypeHelper<T>::Capability;
 
+template <typename T>
+class CapabilityValueEnum : public CapabilityValue<CapabilityValueEnum<T>, T> {
+public:
+  CapabilityValueEnum(T V) : CapabilityValue<CapabilityValueEnum<T>, T>(V) {}
+  static char ID;
+  static std::string valueToString(T V) {
+    return CapabilityPrinter::toString(V);
+  }
+};
+
 class Capability {
   std::string Name;
   std::shared_ptr<CapabilityValueBase> CapabilityData;
@@ -113,16 +123,22 @@ public:
 
   const CapabilityValueBase *getData() const { return CapabilityData.get(); }
 
-  std::string getValueSting() const {
-    return CapabilityData->toString();
-  }
+  std::string getValueSting() const { return CapabilityData->toString(); }
 
   void print(llvm::raw_ostream &OS) const {
     OS << getName() << " = " << getValueSting();
   }
 };
 
-template <typename T> Capability make_capability(llvm::StringRef N, T Value) {
+template <typename T>
+std::enable_if_t<std::is_enum_v<T>, Capability>
+make_capability(llvm::StringRef N, T Value) {
+  return Capability(N, std::make_shared<CapabilityValueEnum<T>>(Value));
+}
+
+template <typename T>
+std::enable_if_t<!std::is_enum_v<T>, Capability>
+make_capability(llvm::StringRef N, T Value) {
   return Capability(N, std::make_shared<CapabilityType<T>>(Value));
 }
 
