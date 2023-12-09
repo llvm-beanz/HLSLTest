@@ -475,7 +475,7 @@ public:
     if (auto Err = HR::toError(IS.CmdList->Reset(IS.Allocator, IS.PSO),
                                "Failed to reset command list."))
       return Err;
-    
+
     IS.CmdList->SetComputeRootSignature(IS.RootSig);
 
     ID3D12DescriptorHeap *const Heaps[] = {IS.DescHeap};
@@ -483,7 +483,7 @@ public:
 
     uint32_t Inc = Device->GetDescriptorHandleIncrementSize(
         D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-        
+
     uint32_t Offset = 0;
     for (uint32_t Idx = 0; Idx < P.Sets.size(); ++Idx, Offset += Inc) {
       D3D12_GPU_DESCRIPTOR_HANDLE Handle =
@@ -500,6 +500,28 @@ public:
     }
 
     return executeCommandList(IS);
+  }
+
+  llvm::Error readBack(Pipeline &P, InvocationState &IS) {
+    for (auto &S : P.Sets) {
+      for (auto &R : S.Resources) {
+        if (R.Access != DataAccess::ReadWrite)
+          continue;
+        auto ResourcePair = IS.Outputs.find(
+            std::make_pair(R.DXBinding.Register, R.DXBinding.Space));
+        if (ResourcePair == IS.Outputs.end())
+          return llvm::createStringError(std::errc::no_such_device_or_address,
+                                         "Failed to find binding.");
+
+        void *DataPtr;
+        if (auto Err = HR::toError(
+                ResourcePair->second.second->Map(0, nullptr, &DataPtr),
+                "Failed to map result."))
+          return Err;
+        memcpy(R.Data.get(), DataPtr, R.Size);
+        ResourcePair->second.second->Unmap(0, nullptr);
+      }
+    }
   }
 
   llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) override {
@@ -529,7 +551,9 @@ public:
     if (auto Err = executeCompute(P, State))
       return Err;
     llvm::outs() << "Compute command list executed.\n";
-
+    if (auto Err = readBack(P, State))
+      return Err;
+    llvm::outs() << "Read data back.\n";
     return llvm::Error::success();
   }
 };

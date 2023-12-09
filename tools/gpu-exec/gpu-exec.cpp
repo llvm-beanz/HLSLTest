@@ -77,6 +77,9 @@ int main(int ArgC, char **ArgV) {
     if (D->getAPI() != APIToUse)
       continue;
     ExitOnErr(D->executeProgram(ShaderBuf->getBuffer(), PipelineDesc));
+
+    yaml::Output YOut(outs());
+    YOut << PipelineDesc;
     return 0;
   }
   errs() << "No device available.";
