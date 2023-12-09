@@ -475,8 +475,8 @@ public:
     if (auto Err = HR::toError(IS.CmdList->Reset(IS.Allocator, IS.PSO),
                                "Failed to reset command list."))
       return Err;
-    // Commented out broken code
-    /*IS.CmdList->SetComputeRootSignature(IS.RootSig);
+    
+    IS.CmdList->SetComputeRootSignature(IS.RootSig);
 
     ID3D12DescriptorHeap *const Heaps[] = {IS.DescHeap};
     IS.CmdList->SetDescriptorHeaps(1, Heaps);
@@ -485,16 +485,11 @@ public:
         D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         
     uint32_t Offset = 0;
-    uint32_t Idx = 0;
-    for (auto &S : P.Sets) {
-      for (auto &R : S.Resources) {
-        (void)R; // todo: need to actually build descriptor tables.
-        D3D12_GPU_DESCRIPTOR_HANDLE Handle =
-            IS.DescHeap->GetGPUDescriptorHandleForHeapStart();
-        Handle.ptr += Offset;
-        IS.CmdList->SetComputeRootDescriptorTable(Idx++, Handle);
-        Offset += Inc;
-      }
+    for (uint32_t Idx = 0; Idx < P.Sets.size(); ++Idx, Offset += Inc) {
+      D3D12_GPU_DESCRIPTOR_HANDLE Handle =
+          IS.DescHeap->GetGPUDescriptorHandleForHeapStart();
+      Handle.ptr += Offset;
+      IS.CmdList->SetComputeRootDescriptorTable(Idx++, Handle);
     }
     IS.CmdList->Dispatch(8, 1, 1); // todo: fix this...
 
@@ -504,9 +499,7 @@ public:
       addReadbackBeginBarrier(IS, Out.second.first);
     }
 
-    IS.CmdList->Close();
-
-    return executeCommandList(IS);*/
+    return executeCommandList(IS);
   }
 
   llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) override {
