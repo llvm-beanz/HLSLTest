@@ -245,8 +245,8 @@ public:
   void addResourceUploadCommands(Resource &R, InvocationState &IS,
                                  CComPtr<ID3D12Resource> Destination,
                                  CComPtr<ID3D12Resource> Source) {
-    addUploadBeginBarrier(IS, Destination);
-    IS.CmdList->CopyBufferRegion(Destination, 0, Source, 0, R.Size);
+    // addUploadBeginBarrier(IS, Destination);
+    IS.CmdList->CopyResource(Destination, Source);
     addUploadEndBarrier(IS, Destination, R.Access == DataAccess::ReadOnly);
   }
 
@@ -279,7 +279,7 @@ public:
 
     if (auto Err = HR::toError(Device->CreateCommittedResource(
                                    &HeapProp, D3D12_HEAP_FLAG_NONE, &ResDesc,
-                                   D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                   D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
                                    IID_PPV_ARGS(&Buffer)),
                                "Failed to create committed resource (buffer)."))
       return Err;
@@ -416,24 +416,16 @@ public:
   }
 
   void addReadbackBeginBarrier(InvocationState &IS, CComPtr<ID3D12Resource> R) {
-    const D3D12_RESOURCE_BARRIER Barrier = {
-        D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-        D3D12_RESOURCE_BARRIER_FLAG_NONE,
-        {D3D12_RESOURCE_TRANSITION_BARRIER{
-            R, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-            D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-            D3D12_RESOURCE_STATE_COPY_SOURCE}}};
+    const D3D12_RESOURCE_BARRIER Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        R, D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+        D3D12_RESOURCE_STATE_COPY_SOURCE);
     IS.CmdList->ResourceBarrier(1, &Barrier);
   }
 
   void addReadbackEndBarrier(InvocationState &IS, CComPtr<ID3D12Resource> R) {
-    const D3D12_RESOURCE_BARRIER Barrier = {
-        D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-        D3D12_RESOURCE_BARRIER_FLAG_NONE,
-        {D3D12_RESOURCE_TRANSITION_BARRIER{
-            R, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-            D3D12_RESOURCE_STATE_COPY_SOURCE,
-            D3D12_RESOURCE_STATE_UNORDERED_ACCESS}}};
+    const D3D12_RESOURCE_BARRIER Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        R, D3D12_RESOURCE_STATE_COPY_SOURCE,
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     IS.CmdList->ResourceBarrier(1, &Barrier);
   }
 
@@ -453,22 +445,31 @@ public:
     if (auto Err =
             HR::toError(IS.CmdList->Close(), "Failed to close command list."))
       return Err;
+
+    // This is a hack but it works since this is all single threaded code.
+    static int FenceCounter = 0;
+    int CurrentCounter = FenceCounter + 1;
+
+    if (auto Err = HR::toError(IS.Queue->Signal(IS.Fence, CurrentCounter),
+                               "Failed to add signal."))
+      return Err;
+
     ID3D12CommandList *CmdLists[] = {IS.CmdList};
     IS.Queue->ExecuteCommandLists(1, CmdLists);
 
-    if (auto Err =
-            HR::toError(IS.Queue->Signal(IS.Fence, 1), "Failed to add signal."))
-      return Err;
+    if (IS.Fence->GetCompletedValue() < CurrentCounter) {
+      if (auto Err = HR::toError(
+              IS.Fence->SetEventOnCompletion(CurrentCounter, IS.Event),
+              "Failed to register end event."))
+        return Err;
+      WaitForSingleObject(IS.Fence, INFINITE);
+    }
+    FenceCounter = CurrentCounter;
 
-    if (auto Err = HR::toError(IS.Fence->SetEventOnCompletion(1, IS.Event),
-                               "Failed to register end event."))
-      return Err;
-
-    WaitForSingleObject(IS.Event, INFINITE);
     return llvm::Error::success();
   }
 
-  llvm::Error executeCompute(Pipeline &P, InvocationState &IS) {
+  llvm::Error createComputeCommands(Pipeline &P, InvocationState &IS) {
     if (auto Err =
             HR::toError(IS.Allocator->Reset(), "Failed to reset allocator."))
       return Err;
@@ -491,15 +492,15 @@ public:
       Handle.ptr += Offset;
       IS.CmdList->SetComputeRootDescriptorTable(Idx++, Handle);
     }
-    IS.CmdList->Dispatch(8, 1, 1); // todo: fix this...
+    IS.CmdList->Dispatch(1, 1, 1);
 
     for (auto &Out : IS.Outputs) {
       addReadbackBeginBarrier(IS, Out.second.first);
       IS.CmdList->CopyResource(Out.second.second, Out.second.first);
-      addReadbackBeginBarrier(IS, Out.second.first);
+      addReadbackEndBarrier(IS, Out.second.first);
     }
 
-    return executeCommandList(IS);
+    return llvm::Error::success();
   }
 
   llvm::Error readBack(Pipeline &P, InvocationState &IS) {
@@ -548,9 +549,12 @@ public:
     if (auto Err = executeCommandList(State))
       return Err;
     llvm::outs() << "Preparation commands executed.\n";
-    if (auto Err = executeCompute(P, State))
+    if (auto Err = createComputeCommands(P, State))
       return Err;
-    llvm::outs() << "Compute command list executed.\n";
+    llvm::outs() << "Compute command list created.\n";
+    if (auto Err = executeCommandList(State))
+      return Err;
+    llvm::outs() << "Compute commands executed.\n";
     if (auto Err = readBack(P, State))
       return Err;
     llvm::outs() << "Read data back.\n";
