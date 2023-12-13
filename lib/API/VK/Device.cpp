@@ -26,6 +26,12 @@ private:
   VkPhysicalDeviceProperties Props;
   Capabilities Caps;
 
+  struct InvocationState {
+    VkDevice Device;
+    VkQueue Queue;
+    VkCommandPool CmdPool;
+  };
+
 public:
   VKDevice(VkPhysicalDevice D) : Device(D) {
     vkGetPhysicalDeviceProperties(Device, &Props);
@@ -55,7 +61,180 @@ public:
 #include "VKFeatures.def"
   }
 
+  llvm::Error createDevice(InvocationState &IS) {
+
+    // Find a queue that supports compute
+    uint32_t QueueCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(Device, &QueueCount, 0);
+    std::unique_ptr<VkQueueFamilyProperties[]> QueueFamilyProps =
+        std::unique_ptr<VkQueueFamilyProperties[]>(
+            new VkQueueFamilyProperties[QueueCount]);
+    vkGetPhysicalDeviceQueueFamilyProperties(Device, &QueueCount,
+                                             QueueFamilyProps.get());
+    uint32_t QueueIdx = 0;
+    for (; QueueIdx < QueueCount; ++QueueIdx)
+      if (QueueFamilyProps.get()[QueueIdx].queueFlags & VK_QUEUE_COMPUTE_BIT)
+        break;
+    if (QueueIdx >= QueueCount)
+      return llvm::createStringError(std::errc::no_such_device,
+                                     "No compute queue found.");
+
+    VkDeviceQueueCreateInfo QueueInfo = {};
+    float QueuePriority = 0.0f;
+    QueueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    QueueInfo.queueFamilyIndex = QueueIdx;
+    QueueInfo.queueCount = 1;
+    QueueInfo.pQueuePriorities = &QueuePriority;
+
+    VkDeviceCreateInfo DeviceInfo = {};
+    DeviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    DeviceInfo.queueCreateInfoCount = 1;
+    DeviceInfo.pQueueCreateInfos = &QueueInfo;
+
+    if (vkCreateDevice(Device, &DeviceInfo, nullptr, &IS.Device))
+      return llvm::createStringError(std::errc::no_such_device,
+                                     "Could not create Vulkan logical device.");
+    vkGetDeviceQueue(IS.Device, QueueIdx, 0, &IS.Queue);
+
+    VkCommandPoolCreateInfo CmdPoolInfo = {};
+    CmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    CmdPoolInfo.queueFamilyIndex = QueueIdx;
+    CmdPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+    if (vkCreateCommandPool(IS.Device, &CmdPoolInfo, nullptr, &IS.CmdPool))
+      return llvm::createStringError(std::errc::device_or_resource_busy,
+                                     "Could not create command pool.");
+    return llvm::Error::success();
+  }
+
+  llvm::Expected<std::pair<VkBuffer, VkDeviceMemory>>
+  createBuffer(InvocationState &IS, VkBufferUsageFlags Usage,
+               VkMemoryPropertyFlags Flags, size_t Size, void *Data = nullptr) {
+    VkBuffer Buffer;
+    VkDeviceMemory Memory;
+    VkBufferCreateInfo BufferInfo = {};
+    BufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    BufferInfo.flags = Flags;
+    BufferInfo.size = Size;
+    BufferInfo.usage = Usage;
+    BufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    if (vkCreateBuffer(IS.Device, &BufferInfo, nullptr, &Buffer))
+      return llvm::createStringError(std::errc::not_enough_memory,
+                                     "Could not create buffer.");
+
+    VkMemoryRequirements MemReqs;
+    vkGetBufferMemoryRequirements(IS.Device, Buffer, &MemReqs);
+    VkMemoryAllocateInfo AllocInfo = {};
+    AllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    AllocInfo.allocationSize = MemReqs.size;
+
+    VkPhysicalDeviceMemoryProperties MemProperties;
+    vkGetPhysicalDeviceMemoryProperties(Device, &MemProperties);
+    uint32_t MemIdx = 0;
+    for (; MemIdx < MemProperties.memoryTypeCount;
+         ++MemIdx, MemReqs.memoryTypeBits >>= 1) {
+      if ((MemReqs.memoryTypeBits & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) &&
+          ((MemProperties.memoryTypes[MemIdx].propertyFlags & Flags) ==
+           Flags)) {
+        break;
+      }
+    }
+    if (MemIdx >= MemProperties.memoryTypeCount)
+      return llvm::createStringError(std::errc::not_enough_memory,
+                                     "Could not identify appropriate memory.");
+
+    AllocInfo.memoryTypeIndex = MemIdx;
+
+    if (vkAllocateMemory(IS.Device, &AllocInfo, nullptr, &Memory))
+      return llvm::createStringError(std::errc::not_enough_memory,
+                                     "Memory allocation failed.");
+    if (Data) {
+      void *Dst = nullptr;
+      if (vkMapMemory(IS.Device, Memory, 0, Size, 0, &Dst))
+        return llvm::createStringError(std::errc::not_enough_memory,
+                                       "Failed to map memory.");
+      memcpy(Dst, Data, Size);
+
+      VkMappedMemoryRange Range = {};
+      Range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+      Range.memory = Memory;
+      Range.offset = 0;
+      Range.size = VK_WHOLE_SIZE;
+      vkFlushMappedMemoryRanges(IS.Device, 1, &Range);
+
+      vkUnmapMemory(IS.Device, Memory);
+    }
+
+    if (vkBindBufferMemory(IS.Device, Buffer, Memory, 0))
+      return llvm::createStringError(std::errc::not_enough_memory,
+                                     "Failed to bind buffer to memory.");
+
+    return std::make_pair(Buffer, Memory);
+  }
+
+  llvm::Error createUAV(Resource &R, InvocationState &IS,
+                        const uint32_t HeapIdx) {
+    auto ExHostBuf = createBuffer(
+        IS, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, R.Size, R.Data.get());
+    if (!ExHostBuf)
+      return ExHostBuf.takeError();
+
+    auto ExDeviceBuf = createBuffer(
+        IS,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, R.Size);
+    if (!ExDeviceBuf)
+      return ExDeviceBuf.takeError();
+
+    return llvm::Error::success();
+  }
+
+  llvm::Error createSRV(Resource &R, InvocationState &IS,
+                        const uint32_t HeapIdx) {
+    return llvm::createStringError(std::errc::not_supported,
+                                   "VXDevice::createSRV not supported.");
+  }
+
+  llvm::Error createCBV(Resource &R, InvocationState &IS,
+                        const uint32_t HeapIdx) {
+    return llvm::createStringError(std::errc::not_supported,
+                                   "VXDevice::createCBV not supported.");
+  }
+
+  llvm::Error createBuffers(Pipeline &P, InvocationState &IS) {
+    uint32_t HeapIndex = 0;
+    for (auto &D : P.Sets) {
+      for (auto &R : D.Resources) {
+        switch (R.Access) {
+        case DataAccess::ReadOnly:
+          if (auto Err = createSRV(R, IS, HeapIndex++))
+            return Err;
+          break;
+        case DataAccess::ReadWrite:
+          if (auto Err = createUAV(R, IS, HeapIndex++))
+            return Err;
+          break;
+        case DataAccess::Constant:
+          if (auto Err = createCBV(R, IS, HeapIndex++))
+            return Err;
+          break;
+        }
+      }
+    }
+    return llvm::Error::success();
+  }
+
   llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) override {
+    InvocationState State;
+    if (auto Err = createDevice(State))
+      return Err;
+    llvm::outs() << "Physical device created.\n";
+    if (auto Err = createBuffers(P, State))
+      return Err;
+    llvm::outs() << "Memory buffers created.\n";
     return llvm::createStringError(std::errc::not_supported,
                                    "VKDevice::executeProgram not supported.");
   }
