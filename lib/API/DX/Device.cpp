@@ -53,7 +53,18 @@ private:
   CComPtr<ID3D12Device> Device;
   Capabilities Caps;
 
+  struct UAVResourceSet {
+    CComPtr<ID3D12Resource> Upload;
+    CComPtr<ID3D12Resource> Buffer;
+    CComPtr<ID3D12Resource> Readback;
+  };
+
   struct InvocationState {
+    // Resource references need to be the last things cleaned up, so put them at
+    // the top.
+    using Binding = std::pair<uint32_t, uint32_t>;
+    llvm::DenseMap<Binding, UAVResourceSet> Outputs;
+
     CComPtr<ID3D12RootSignature> RootSig;
     CComPtr<ID3D12DescriptorHeap> DescHeap;
     CComPtr<ID3D12PipelineState> PSO;
@@ -62,12 +73,6 @@ private:
     CComPtr<ID3D12GraphicsCommandList> CmdList;
     CComPtr<ID3D12Fence> Fence;
     HANDLE Event;
-
-    llvm::SmallVector<CComPtr<ID3D12Resource>> Resources;
-    using Binding = std::pair<uint32_t, uint32_t>;
-    using ResourcePair =
-        std::pair<CComPtr<ID3D12Resource>, CComPtr<ID3D12Resource>>;
-    llvm::DenseMap<Binding, ResourcePair> Outputs;
   };
 
 public:
@@ -245,8 +250,8 @@ public:
   void addResourceUploadCommands(Resource &R, InvocationState &IS,
                                  CComPtr<ID3D12Resource> Destination,
                                  CComPtr<ID3D12Resource> Source) {
-    // addUploadBeginBarrier(IS, Destination);
-    IS.CmdList->CopyResource(Destination, Source);
+    addUploadBeginBarrier(IS, Destination);
+    IS.CmdList->CopyBufferRegion(Destination, 0, Source, 0, R.Size);
     addUploadEndBarrier(IS, Destination, R.Access == DataAccess::ReadOnly);
   }
 
@@ -258,13 +263,15 @@ public:
 
   llvm::Error createUAV(Resource &R, InvocationState &IS,
                         const uint32_t HeapIdx) {
+    llvm::outs() << "Creating UAV: { Size = " << R.Size << ", Register = u"
+                 << R.DXBinding.Register << ", Space = " << R.DXBinding.Space
+                 << " }\n";
     CComPtr<ID3D12Resource> Buffer;
     CComPtr<ID3D12Resource> UploadBuffer;
     CComPtr<ID3D12Resource> ReadBackBuffer;
 
-    const D3D12_HEAP_PROPERTIES HeapProp = {D3D12_HEAP_TYPE_DEFAULT,
-                                            D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-                                            D3D12_MEMORY_POOL_UNKNOWN, 1, 1};
+    const D3D12_HEAP_PROPERTIES HeapProp =
+        CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
     const D3D12_RESOURCE_DESC ResDesc = {
         D3D12_RESOURCE_DIMENSION_BUFFER,
         0,
@@ -284,19 +291,10 @@ public:
                                "Failed to create committed resource (buffer)."))
       return Err;
 
-    const D3D12_HEAP_PROPERTIES UploadHeapProp = {
-        D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-        D3D12_MEMORY_POOL_UNKNOWN, 1, 1};
-    const D3D12_RESOURCE_DESC UploadResDesc = {D3D12_RESOURCE_DIMENSION_BUFFER,
-                                               0,
-                                               R.Size,
-                                               1,
-                                               1,
-                                               1,
-                                               DXGI_FORMAT_UNKNOWN,
-                                               {1, 0},
-                                               D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-                                               D3D12_RESOURCE_FLAG_NONE};
+    const D3D12_HEAP_PROPERTIES UploadHeapProp =
+        CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+    const D3D12_RESOURCE_DESC UploadResDesc =
+        CD3DX12_RESOURCE_DESC::Buffer(R.Size);
 
     if (auto Err =
             HR::toError(Device->CreateCommittedResource(
@@ -306,9 +304,8 @@ public:
                         "Failed to create committed resource (upload buffer)."))
       return Err;
 
-    const D3D12_HEAP_PROPERTIES ReadBackHeapProp = {
-        D3D12_HEAP_TYPE_READBACK, D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-        D3D12_MEMORY_POOL_UNKNOWN, 1, 1};
+    const D3D12_HEAP_PROPERTIES ReadBackHeapProp =
+        CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
     const D3D12_RESOURCE_DESC ReadBackResDesc = {
         D3D12_RESOURCE_DIMENSION_BUFFER,
         0,
@@ -352,14 +349,10 @@ public:
                                    D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     Device->CreateUnorderedAccessView(Buffer, nullptr, &UAVDesc, UAVHandle);
 
-    IS.Resources.push_back(Buffer);
-    IS.Resources.push_back(UploadBuffer);
-
     std::pair<uint32_t, uint32_t> Binding = {R.DXBinding.Register,
                                              R.DXBinding.Space};
-    std::pair<CComPtr<ID3D12Resource>, CComPtr<ID3D12Resource>> SrcDstPair = {
-        Buffer, ReadBackBuffer};
-    IS.Outputs.insert(std::make_pair(Binding, SrcDstPair));
+    UAVResourceSet Resources = {UploadBuffer, Buffer, ReadBackBuffer};
+    IS.Outputs.insert(std::make_pair(Binding, Resources));
     return llvm::Error::success();
   }
 
@@ -409,7 +402,7 @@ public:
         D3D12_RESOURCE_BARRIER_FLAG_NONE,
         {D3D12_RESOURCE_TRANSITION_BARRIER{
             R, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-            D3D12_RESOURCE_STATE_COMMON,
+            D3D12_RESOURCE_STATE_COPY_DEST,
             IsUAV ? D3D12_RESOURCE_STATE_UNORDERED_ACCESS
                   : D3D12_RESOURCE_STATE_GENERIC_READ}}};
     IS.CmdList->ResourceBarrier(1, &Barrier);
@@ -441,21 +434,14 @@ public:
     return llvm::Error::success();
   }
 
-  llvm::Error executeCommandList(InvocationState &IS) {
-    if (auto Err =
-            HR::toError(IS.CmdList->Close(), "Failed to close command list."))
-      return Err;
-
+  llvm::Error waitForSignal(InvocationState &IS) {
     // This is a hack but it works since this is all single threaded code.
-    static int FenceCounter = 0;
-    int CurrentCounter = FenceCounter + 1;
+    static uint64_t FenceCounter = 0;
+    uint64_t CurrentCounter = FenceCounter + 1;
 
     if (auto Err = HR::toError(IS.Queue->Signal(IS.Fence, CurrentCounter),
                                "Failed to add signal."))
       return Err;
-
-    ID3D12CommandList *CmdLists[] = {IS.CmdList};
-    IS.Queue->ExecuteCommandLists(1, CmdLists);
 
     if (IS.Fence->GetCompletedValue() < CurrentCounter) {
       if (auto Err = HR::toError(
@@ -465,8 +451,19 @@ public:
       WaitForSingleObject(IS.Fence, INFINITE);
     }
     FenceCounter = CurrentCounter;
-
+    Sleep(50);
     return llvm::Error::success();
+  }
+
+  llvm::Error executeCommandList(InvocationState &IS) {
+    if (auto Err =
+            HR::toError(IS.CmdList->Close(), "Failed to close command list."))
+      return Err;
+
+    ID3D12CommandList *CmdLists[] = {IS.CmdList};
+    IS.Queue->ExecuteCommandLists(1, CmdLists);
+
+    return waitForSignal(IS);
   }
 
   llvm::Error createComputeCommands(Pipeline &P, InvocationState &IS) {
@@ -495,9 +492,9 @@ public:
     IS.CmdList->Dispatch(1, 1, 1);
 
     for (auto &Out : IS.Outputs) {
-      addReadbackBeginBarrier(IS, Out.second.first);
-      IS.CmdList->CopyResource(Out.second.second, Out.second.first);
-      addReadbackEndBarrier(IS, Out.second.first);
+      addReadbackBeginBarrier(IS, Out.second.Buffer);
+      IS.CmdList->CopyResource(Out.second.Readback, Out.second.Buffer);
+      addReadbackEndBarrier(IS, Out.second.Buffer);
     }
 
     return llvm::Error::success();
@@ -516,13 +513,14 @@ public:
 
         void *DataPtr;
         if (auto Err = HR::toError(
-                ResourcePair->second.second->Map(0, nullptr, &DataPtr),
+                ResourcePair->second.Readback->Map(0, nullptr, &DataPtr),
                 "Failed to map result."))
           return Err;
         memcpy(R.Data.get(), DataPtr, R.Size);
-        ResourcePair->second.second->Unmap(0, nullptr);
+        ResourcePair->second.Readback->Unmap(0, nullptr);
       }
     }
+    return waitForSignal(IS);
   }
 
   llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) override {
@@ -558,6 +556,7 @@ public:
     if (auto Err = readBack(P, State))
       return Err;
     llvm::outs() << "Read data back.\n";
+
     return llvm::Error::success();
   }
 };
@@ -565,6 +564,7 @@ public:
 class DirectXContext {
 private:
   CComPtr<IDXGIFactory2> Factory;
+  CComPtr<ID3D12Debug> Debug;
   llvm::SmallVector<std::shared_ptr<DXDevice>> Devices;
 
   DirectXContext() = default;
@@ -572,6 +572,11 @@ private:
 
 public:
   llvm::Error initialize() {
+
+    if (auto Err = HR::toError(D3D12GetDebugInterface(IID_PPV_ARGS(&Debug)),
+                               "failed to create D3D12 Debug Interface"))
+      return Err;
+    Debug->EnableDebugLayer();
     if (auto Err = HR::toError(CreateDXGIFactory2(0, IID_PPV_ARGS(&Factory)),
                                "Failed to create DXGI Factory")) {
       return Err;
