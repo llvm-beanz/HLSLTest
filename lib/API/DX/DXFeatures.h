@@ -12,6 +12,7 @@
 #ifndef HLSLTEST_API_DXFEATURES_H
 #define HLSLTEST_API_DXFEATURES_H
 
+#include "HLSLTest/API/Capabilities.h"
 #include "llvm/ADT/ArrayRef.h"
 
 namespace llvm {
@@ -23,20 +24,23 @@ namespace directx {
 
 #define SHADER_MODEL_ENUM(NewCase, Str, Value) NewCase = Value,
 enum ShaderModel {
-    #include "DXFeatures.def"
+#include "DXFeatures.def"
 };
 
 #define ROOT_SIGNATURE_ENUM(NewCase, Str, Value) NewCase = Value,
 enum RootSignature {
-    #include "DXFeatures.def"
+#include "DXFeatures.def"
 };
 
-}
+} // namespace directx
 
-namespace CapabilityPrinter {
-    std::string toString(directx::ShaderModel M);
-    std::string toString(directx::RootSignature R);
-}
+template <> struct CapabilityPrinter<directx::ShaderModel> {
+  static std::string toString(const directx::ShaderModel &V);
+};
+
+template <> struct CapabilityPrinter<directx::RootSignature> {
+  static std::string toString(const directx::RootSignature &V);
+};
 
 } // namespace hlsltest
 

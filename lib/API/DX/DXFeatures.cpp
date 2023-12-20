@@ -17,7 +17,7 @@ using namespace hlsltest::directx;
 using namespace llvm;
 
 #define SHADER_MODEL_ENUM(NewCase, Str, Value) {#Str, NewCase},
-static const EnumEntry<directx::ShaderModel> ShaderModelNames[] {
+static const EnumEntry<directx::ShaderModel> ShaderModelNames[]{
 #include "DXFeatures.def"
 };
 
@@ -26,7 +26,7 @@ static ArrayRef<EnumEntry<ShaderModel>> getShaderModels() {
 }
 
 #define ROOT_SIGNATURE_ENUM(NewCase, Str, Value) {#Str, NewCase},
-static const EnumEntry<directx::RootSignature> RootSignatureNames[] {
+static const EnumEntry<directx::RootSignature> RootSignatureNames[]{
 #include "DXFeatures.def"
 };
 
@@ -43,9 +43,12 @@ std::string enumEntryToString(ArrayRef<EnumEntry<T>> EnumValues, T Value) {
 }
 } // namespace
 
-std::string CapabilityPrinter::toString(ShaderModel M) {
-  return enumEntryToString(getShaderModels(), M);
+std::string CapabilityPrinter<directx::ShaderModel>::toString(
+    const directx::ShaderModel &V) {
+  return enumEntryToString(getShaderModels(), V);
 }
-std::string CapabilityPrinter::toString(RootSignature R) {
-  return enumEntryToString(getRootSignatures(), R);
+
+std::string CapabilityPrinter<directx::RootSignature>::toString(
+    const directx::RootSignature &V) {
+  return enumEntryToString(getRootSignatures(), V);
 }

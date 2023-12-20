@@ -95,6 +95,9 @@ template <> struct CapabilityTypeHelper<uint32_t> {
 };
 } // namespace detail
 
+template<typename T>
+struct CapabilityPrinter;
+
 template <typename T>
 using CapabilityType = typename detail::CapabilityTypeHelper<T>::Capability;
 
@@ -104,7 +107,7 @@ public:
   CapabilityValueEnum(T V) : CapabilityValue<CapabilityValueEnum<T>, T>(V) {}
   static char ID;
   static std::string valueToString(T V) {
-    return CapabilityPrinter::toString(V);
+    return CapabilityPrinter<T>::toString(V);
   }
 };
 
