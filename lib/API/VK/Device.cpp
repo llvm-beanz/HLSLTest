@@ -26,11 +26,25 @@ private:
   VkPhysicalDeviceProperties Props;
   Capabilities Caps;
 
+  struct BufferRef {
+    VkBuffer Buffer;
+    VkDeviceMemory Memory;
+  };
+
+  struct UAVRef {
+    BufferRef Host;
+    BufferRef Device;
+  };
+
   struct InvocationState {
     VkDevice Device;
     VkQueue Queue;
     VkCommandPool CmdPool;
     VkCommandBuffer CmdBuffer;
+
+    llvm::SmallVector<VkDescriptorPool> DescriptorPools;
+    llvm::SmallVector<VkDescriptorSetLayout> DescriptorSetLayouts;
+    llvm::SmallVector<UAVRef> UAVs;
   };
 
 public:
@@ -125,9 +139,10 @@ public:
     return llvm::Error::success();
   }
 
-  llvm::Expected<std::pair<VkBuffer, VkDeviceMemory>>
-  createBuffer(InvocationState &IS, VkBufferUsageFlags Usage,
-               VkMemoryPropertyFlags Flags, size_t Size, void *Data = nullptr) {
+  llvm::Expected<BufferRef> createBuffer(InvocationState &IS,
+                                         VkBufferUsageFlags Usage,
+                                         VkMemoryPropertyFlags Flags,
+                                         size_t Size, void *Data = nullptr) {
     VkBuffer Buffer;
     VkDeviceMemory Memory;
     VkBufferCreateInfo BufferInfo = {};
@@ -188,7 +203,7 @@ public:
       return llvm::createStringError(std::errc::not_enough_memory,
                                      "Failed to bind buffer to memory.");
 
-    return std::make_pair(Buffer, Memory);
+    return BufferRef{Buffer, Memory};
   }
 
   llvm::Error createUAV(Resource &R, InvocationState &IS,
@@ -209,8 +224,10 @@ public:
 
     VkBufferCopy Copy = {};
     Copy.size = R.Size;
-    vkCmdCopyBuffer(IS.CmdBuffer, ExHostBuf->first, ExDeviceBuf->first, 1,
+    vkCmdCopyBuffer(IS.CmdBuffer, ExHostBuf->Buffer, ExDeviceBuf->Buffer, 1,
                     &Copy);
+
+    IS.UAVs.push_back(UAVRef{*ExHostBuf, *ExDeviceBuf});
 
     return llvm::Error::success();
   }
@@ -279,6 +296,67 @@ public:
     return llvm::Error::success();
   }
 
+  llvm::Error createPipeline(Pipeline &P, InvocationState &IS) {
+    for (const auto &S : P.Sets) {
+      VkDescriptorPoolSize PoolSize = {};
+      PoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+      PoolSize.descriptorCount = S.Resources.size();
+      VkDescriptorPoolCreateInfo PoolCreateInfo;
+      PoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+      PoolCreateInfo.poolSizeCount = 1;
+      PoolCreateInfo.pPoolSizes = &PoolSize;
+      VkDescriptorPool Pool;
+      if (vkCreateDescriptorPool(IS.Device, &PoolCreateInfo, nullptr, &Pool))
+        return llvm::createStringError(std::errc::device_or_resource_busy,
+                                       "Failed to create descriptor pool.");
+      IS.DescriptorPools.push_back(Pool);
+
+      std::vector<VkDescriptorSetLayoutBinding> Bindings;
+      uint32_t BindingIdx = 0;
+      for (const auto &R : S.Resources) {
+        (void)R; // Todo: set this correctly for the data type.
+        VkDescriptorSetLayoutBinding Binding = {};
+        Binding.binding = BindingIdx++;
+        Binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        Binding.descriptorCount = 1;
+        Binding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        Bindings.push_back(Binding);
+      }
+      VkDescriptorSetLayoutCreateInfo LayoutCreateInfo = {};
+      LayoutCreateInfo.sType =
+          VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+      LayoutCreateInfo.bindingCount = Bindings.size();
+      LayoutCreateInfo.pBindings = Bindings.data();
+      VkDescriptorSetLayout Layout;
+      if (vkCreateDescriptorSetLayout(IS.Device, &LayoutCreateInfo, nullptr,
+                                      &Layout))
+        return llvm::createStringError(
+            std::errc::device_or_resource_busy,
+            "Failed to create descriptor set layout.");
+      IS.DescriptorSetLayouts.push_back(Layout);
+    }
+    return llvm::Error::success();
+  }
+
+  llvm::Error cleanup(InvocationState &IS) {
+    for (auto &R : IS.UAVs) {
+      vkDestroyBuffer(IS.Device, R.Device.Buffer, nullptr);
+      vkFreeMemory(IS.Device, R.Device.Memory, nullptr);
+      vkDestroyBuffer(IS.Device, R.Host.Buffer, nullptr);
+      vkFreeMemory(IS.Device, R.Host.Memory, nullptr);
+    }
+
+    for (auto &L : IS.DescriptorSetLayouts)
+      vkDestroyDescriptorSetLayout(IS.Device, L, nullptr);
+
+    for (auto &P : IS.DescriptorPools)
+      vkDestroyDescriptorPool(IS.Device, P, nullptr);
+
+    vkDestroyCommandPool(IS.Device, IS.CmdPool, nullptr);
+    vkDestroyDevice(IS.Device, nullptr);
+    return llvm::Error::success();
+  }
+
   llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) override {
     InvocationState State;
     if (auto Err = createDevice(State))
@@ -296,6 +374,13 @@ public:
     if (auto Err = createCommandBuffer(State))
       return Err;
     llvm::outs() << "Execute command buffer created.\n";
+    if (auto Err = createPipeline(P, State))
+      return Err;
+    llvm::outs() << "Compute pipeline created.\n";
+
+    if (auto Err = cleanup(State))
+      return Err;
+    llvm::outs() << "Cleanup complete.\n";
     return llvm::createStringError(std::errc::not_supported,
                                    "VKDevice::executeProgram not supported.");
   }
