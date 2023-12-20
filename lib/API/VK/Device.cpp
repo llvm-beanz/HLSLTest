@@ -30,6 +30,7 @@ private:
     VkDevice Device;
     VkQueue Queue;
     VkCommandPool CmdPool;
+    VkCommandBuffer CmdBuffer;
   };
 
 public:
@@ -104,6 +105,23 @@ public:
     if (vkCreateCommandPool(IS.Device, &CmdPoolInfo, nullptr, &IS.CmdPool))
       return llvm::createStringError(std::errc::device_or_resource_busy,
                                      "Could not create command pool.");
+    return llvm::Error::success();
+  }
+
+  llvm::Error createCommandBuffer(InvocationState &IS) {
+    VkCommandBufferAllocateInfo CBufAllocInfo = {};
+    CBufAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    CBufAllocInfo.commandPool = IS.CmdPool;
+    CBufAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    CBufAllocInfo.commandBufferCount = 1;
+    if (vkAllocateCommandBuffers(IS.Device, &CBufAllocInfo, &IS.CmdBuffer))
+      return llvm::createStringError(std::errc::device_or_resource_busy,
+                                     "Could not create command buffer.");
+    VkCommandBufferBeginInfo BufferInfo = {};
+    BufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    if (vkBeginCommandBuffer(IS.CmdBuffer, &BufferInfo))
+      return llvm::createStringError(std::errc::device_or_resource_busy,
+                                     "Could not begin command buffer.");
     return llvm::Error::success();
   }
 
@@ -189,6 +207,11 @@ public:
     if (!ExDeviceBuf)
       return ExDeviceBuf.takeError();
 
+    VkBufferCopy Copy = {};
+    Copy.size = R.Size;
+    vkCmdCopyBuffer(IS.CmdBuffer, ExHostBuf->first, ExDeviceBuf->first, 1,
+                    &Copy);
+
     return llvm::Error::success();
   }
 
@@ -227,14 +250,52 @@ public:
     return llvm::Error::success();
   }
 
+  llvm::Error executeCommandBuffer(InvocationState &IS) {
+    if (vkEndCommandBuffer(IS.CmdBuffer))
+      return llvm::createStringError(std::errc::device_or_resource_busy,
+                                     "Could not end command buffer.");
+
+    VkSubmitInfo SubmitInfo = {};
+    SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    SubmitInfo.commandBufferCount = 1;
+    SubmitInfo.pCommandBuffers = &IS.CmdBuffer;
+    VkFenceCreateInfo FenceInfo = {};
+    FenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    VkFence Fence;
+    if (vkCreateFence(IS.Device, &FenceInfo, nullptr, &Fence))
+      return llvm::createStringError(std::errc::device_or_resource_busy,
+                                     "Could not create fence.");
+
+    // Submit to the queue
+    if (vkQueueSubmit(IS.Queue, 1, &SubmitInfo, Fence))
+      return llvm::createStringError(std::errc::device_or_resource_busy,
+                                     "Failed to submit to queue.");
+    if (vkWaitForFences(IS.Device, 1, &Fence, VK_TRUE, UINT64_MAX))
+      return llvm::createStringError(std::errc::device_or_resource_busy,
+                                     "Failed waiting for fence.");
+
+    vkDestroyFence(IS.Device, Fence, nullptr);
+    vkFreeCommandBuffers(IS.Device, IS.CmdPool, 1, &IS.CmdBuffer);
+    return llvm::Error::success();
+  }
+
   llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) override {
     InvocationState State;
     if (auto Err = createDevice(State))
       return Err;
     llvm::outs() << "Physical device created.\n";
+    if (auto Err = createCommandBuffer(State))
+      return Err;
+    llvm::outs() << "Copy command buffer created.\n";
     if (auto Err = createBuffers(P, State))
       return Err;
     llvm::outs() << "Memory buffers created.\n";
+    if (auto Err = executeCommandBuffer(State))
+      return Err;
+    llvm::outs() << "Executed copy command buffer.\n";
+    if (auto Err = createCommandBuffer(State))
+      return Err;
+    llvm::outs() << "Execute command buffer created.\n";
     return llvm::createStringError(std::errc::not_supported,
                                    "VKDevice::executeProgram not supported.");
   }
