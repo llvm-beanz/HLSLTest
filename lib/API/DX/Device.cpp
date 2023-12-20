@@ -51,6 +51,7 @@ class DXDevice : public hlsltest::Device {
 private:
   CComPtr<IDXGIAdapter1> Adapter;
   CComPtr<ID3D12Device> Device;
+  CComPtr<ID3D12InfoQueue> InfoQueue;
   Capabilities Caps;
 
   struct UAVResourceSet {
@@ -128,12 +129,25 @@ public:
 #include "DXFeatures.def"
   }
 
+  llvm::Error initializeInfoQueue() {
+    if (auto Err = HR::toError(Device.QueryInterface(&InfoQueue),
+                               "Error initializing info queue"))
+      return Err;
+    InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+    InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+    InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
+    return llvm::Error::success();
+  }
+
   llvm::Error createRootSignature(Pipeline &P, InvocationState &State) {
     std::vector<D3D12_ROOT_PARAMETER> RootParams;
     uint32_t DescriptorCount = P.getDescriptorCount();
     std::unique_ptr<D3D12_DESCRIPTOR_RANGE[]> Ranges =
         std::unique_ptr<D3D12_DESCRIPTOR_RANGE[]>(
             new D3D12_DESCRIPTOR_RANGE[DescriptorCount]);
+
+    uint32_t Inc = Device->GetDescriptorHandleIncrementSize(
+        D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
     uint32_t RangeIdx = 0;
     for (const auto &D : P.Sets) {
@@ -154,22 +168,21 @@ public:
         Ranges.get()[RangeIdx].NumDescriptors = 1;
         Ranges.get()[RangeIdx].BaseShaderRegister = R.DXBinding.Register;
         Ranges.get()[RangeIdx].RegisterSpace = R.DXBinding.Space;
-        Ranges.get()[RangeIdx].OffsetInDescriptorsFromTableStart =
-            DescriptorIdx;
+        Ranges.get()[RangeIdx].OffsetInDescriptorsFromTableStart = RangeIdx - StartRangeIdx;
         RangeIdx++;
       }
-      if (D.Resources.size() > 0)
-        RootParams.push_back(
-            D3D12_ROOT_PARAMETER{D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-                                 {D3D12_ROOT_DESCRIPTOR_TABLE{
-                                     static_cast<uint32_t>(D.Resources.size()),
-                                     &Ranges[StartRangeIdx]}},
-                                 D3D12_SHADER_VISIBILITY_ALL});
+      RootParams.push_back(
+          D3D12_ROOT_PARAMETER{D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+                               {D3D12_ROOT_DESCRIPTOR_TABLE{
+                                   static_cast<uint32_t>(D.Resources.size()),
+                                   &Ranges.get()[StartRangeIdx]}},
+                               D3D12_SHADER_VISIBILITY_ALL});
     }
 
-    D3D12_ROOT_SIGNATURE_DESC Desc = D3D12_ROOT_SIGNATURE_DESC{
+    CD3DX12_ROOT_SIGNATURE_DESC Desc;
+    Desc.Init(
         static_cast<uint32_t>(RootParams.size()), RootParams.data(), 0, nullptr,
-        D3D12_ROOT_SIGNATURE_FLAG_NONE};
+        D3D12_ROOT_SIGNATURE_FLAG_NONE);
 
     CComPtr<ID3DBlob> Signature;
     CComPtr<ID3DBlob> Error;
@@ -203,8 +216,6 @@ public:
                                    &HeapDesc, IID_PPV_ARGS(&State.DescHeap)),
                                "Failed to create descriptor heap."))
       return Err;
-    Device->GetDescriptorHandleIncrementSize(
-        D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     return llvm::Error::success();
   }
 
@@ -286,7 +297,7 @@ public:
 
     if (auto Err = HR::toError(Device->CreateCommittedResource(
                                    &HeapProp, D3D12_HEAP_FLAG_NONE, &ResDesc,
-                                   D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+                                   D3D12_RESOURCE_STATE_COMMON, nullptr,
                                    IID_PPV_ARGS(&Buffer)),
                                "Failed to create committed resource (buffer)."))
       return Err;
@@ -343,6 +354,8 @@ public:
         D3D12_UAV_DIMENSION_BUFFER,
         {D3D12_BUFFER_UAV{0, NumElts, EltSize, 0, D3D12_BUFFER_UAV_FLAG_NONE}}};
 
+    llvm::outs() << "UAV: HeapIdx = " << HeapIdx << " EltSize = " << EltSize
+                 << " NumElts = " << NumElts << "\n";
     D3D12_CPU_DESCRIPTOR_HANDLE UAVHandle =
         IS.DescHeap->GetCPUDescriptorHandleForHeapStart();
     UAVHandle.ptr += HeapIdx * Device->GetDescriptorHandleIncrementSize(
@@ -451,7 +464,6 @@ public:
       WaitForSingleObject(IS.Fence, INFINITE);
     }
     FenceCounter = CurrentCounter;
-    Sleep(50);
     return llvm::Error::success();
   }
 
@@ -487,7 +499,7 @@ public:
       D3D12_GPU_DESCRIPTOR_HANDLE Handle =
           IS.DescHeap->GetGPUDescriptorHandleForHeapStart();
       Handle.ptr += Offset;
-      IS.CmdList->SetComputeRootDescriptorTable(Idx++, Handle);
+      IS.CmdList->SetComputeRootDescriptorTable(Idx, Handle);
     }
     IS.CmdList->Dispatch(1, 1, 1);
 
@@ -524,6 +536,8 @@ public:
   }
 
   llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) override {
+    if (auto Err = initializeInfoQueue())
+      return Err;
     InvocationState State;
     llvm::outs() << "Configuring execution on device: " << Description << "\n";
     if (auto Err = createRootSignature(P, State))
@@ -556,6 +570,9 @@ public:
     if (auto Err = readBack(P, State))
       return Err;
     llvm::outs() << "Read data back.\n";
+    if (auto Err = waitForSignal(State))
+      return Err;
+    llvm::outs() << "Wait and Sync...\n";
 
     return llvm::Error::success();
   }
@@ -565,6 +582,7 @@ class DirectXContext {
 private:
   CComPtr<IDXGIFactory2> Factory;
   CComPtr<ID3D12Debug> Debug;
+  CComPtr<ID3D12Debug1> Debug1; // I hate this name!
   llvm::SmallVector<std::shared_ptr<DXDevice>> Devices;
 
   DirectXContext() = default;
@@ -576,7 +594,13 @@ public:
     if (auto Err = HR::toError(D3D12GetDebugInterface(IID_PPV_ARGS(&Debug)),
                                "failed to create D3D12 Debug Interface"))
       return Err;
+
+    if (auto Err = HR::toError(Debug->QueryInterface(IID_PPV_ARGS(&Debug1)),
+                               "Failed to queryy Debug interface"))
+      return Err;
     Debug->EnableDebugLayer();
+    Debug1->SetEnableGPUBasedValidation(true);
+
     if (auto Err = HR::toError(CreateDXGIFactory2(0, IID_PPV_ARGS(&Factory)),
                                "Failed to create DXGI Factory")) {
       return Err;
