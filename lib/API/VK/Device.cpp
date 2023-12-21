@@ -43,6 +43,9 @@ private:
     VkCommandBuffer CmdBuffer;
     VkPipelineLayout PipelineLayout;
     VkDescriptorPool Pool;
+    VkPipelineCache PipelineCache;
+    VkShaderModule Shader;
+    VkPipeline Pipeline;
 
     llvm::SmallVector<VkDescriptorSetLayout> DescriptorSetLayouts;
     llvm::SmallVector<UAVRef> UAVs;
@@ -298,7 +301,7 @@ public:
     return llvm::Error::success();
   }
 
-  llvm::Error createPipeline(Pipeline &P, InvocationState &IS) {
+  llvm::Error createDescriptorSets(Pipeline &P, InvocationState &IS) {
     VkDescriptorPoolSize PoolSize = {};
     PoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     PoolSize.descriptorCount = P.getDescriptorCount();
@@ -385,6 +388,42 @@ public:
     return llvm::Error::success();
   }
 
+  llvm::Error createShaderModule(llvm::StringRef Program, InvocationState &IS) {
+    VkShaderModuleCreateInfo ShaderCreateInfo = {};
+    ShaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    ShaderCreateInfo.codeSize = Program.size();
+    ShaderCreateInfo.pCode = reinterpret_cast<const uint32_t *>(Program.data());
+    if (vkCreateShaderModule(IS.Device, &ShaderCreateInfo, nullptr, &IS.Shader))
+      return llvm::createStringError(std::errc::not_supported,
+                                     "Failed to create shader module.");
+    return llvm::Error::success();
+  }
+
+  llvm::Error createPipeline(Pipeline &P, InvocationState &IS) {
+    VkPipelineCacheCreateInfo CacheCreateInfo = {};
+    CacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+    if (vkCreatePipelineCache(IS.Device, &CacheCreateInfo, nullptr,
+                              &IS.PipelineCache))
+      return llvm::createStringError(std::errc::device_or_resource_busy,
+                                     "Failed to create pipeline cache.");
+
+    VkPipelineShaderStageCreateInfo StageInfo = {};
+    StageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    StageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    StageInfo.module = IS.Shader;
+    StageInfo.pName = "main";
+
+    VkComputePipelineCreateInfo PipelineCreateInfo = {};
+    PipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    PipelineCreateInfo.stage = StageInfo;
+    if (vkCreateComputePipelines(IS.Device, IS.PipelineCache, 1,
+                                 &PipelineCreateInfo, nullptr, &IS.Pipeline))
+      return llvm::createStringError(std::errc::device_or_resource_busy,
+                                     "Failed to create pipeline.");
+
+    return llvm::Error::success();
+  }
+
   llvm::Error cleanup(InvocationState &IS) {
     for (auto &R : IS.UAVs) {
       vkDestroyBuffer(IS.Device, R.Device.Buffer, nullptr);
@@ -392,6 +431,12 @@ public:
       vkDestroyBuffer(IS.Device, R.Host.Buffer, nullptr);
       vkFreeMemory(IS.Device, R.Host.Memory, nullptr);
     }
+
+    vkDestroyPipeline(IS.Device, IS.Pipeline, nullptr);
+
+    vkDestroyShaderModule(IS.Device, IS.Shader, nullptr);
+
+    vkDestroyPipelineCache(IS.Device, IS.PipelineCache, nullptr);
 
     vkDestroyPipelineLayout(IS.Device, IS.PipelineLayout, nullptr);
 
@@ -422,6 +467,12 @@ public:
     if (auto Err = createCommandBuffer(State))
       return Err;
     llvm::outs() << "Execute command buffer created.\n";
+    if (auto Err = createDescriptorSets(P, State))
+      return Err;
+    llvm::outs() << "Descriptor sets created.\n";
+    if (auto Err = createShaderModule(Program, State))
+      return Err;
+    llvm::outs() << "Shader module created.\n";
     if (auto Err = createPipeline(P, State))
       return Err;
     llvm::outs() << "Compute pipeline created.\n";
