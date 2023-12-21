@@ -41,10 +41,12 @@ private:
     VkQueue Queue;
     VkCommandPool CmdPool;
     VkCommandBuffer CmdBuffer;
+    VkPipelineLayout PipelineLayout;
+    VkDescriptorPool Pool;
 
-    llvm::SmallVector<VkDescriptorPool> DescriptorPools;
     llvm::SmallVector<VkDescriptorSetLayout> DescriptorSetLayouts;
     llvm::SmallVector<UAVRef> UAVs;
+    llvm::SmallVector<VkDescriptorSet> DescriptorSets;
   };
 
 public:
@@ -297,20 +299,18 @@ public:
   }
 
   llvm::Error createPipeline(Pipeline &P, InvocationState &IS) {
+    VkDescriptorPoolSize PoolSize = {};
+    PoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    PoolSize.descriptorCount = P.getDescriptorCount();
+    VkDescriptorPoolCreateInfo PoolCreateInfo;
+    PoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    PoolCreateInfo.poolSizeCount = 1;
+    PoolCreateInfo.pPoolSizes = &PoolSize;
+    PoolCreateInfo.maxSets = P.Sets.size();
+    if (vkCreateDescriptorPool(IS.Device, &PoolCreateInfo, nullptr, &IS.Pool))
+      return llvm::createStringError(std::errc::device_or_resource_busy,
+                                     "Failed to create descriptor pool.");
     for (const auto &S : P.Sets) {
-      VkDescriptorPoolSize PoolSize = {};
-      PoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-      PoolSize.descriptorCount = S.Resources.size();
-      VkDescriptorPoolCreateInfo PoolCreateInfo;
-      PoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-      PoolCreateInfo.poolSizeCount = 1;
-      PoolCreateInfo.pPoolSizes = &PoolSize;
-      VkDescriptorPool Pool;
-      if (vkCreateDescriptorPool(IS.Device, &PoolCreateInfo, nullptr, &Pool))
-        return llvm::createStringError(std::errc::device_or_resource_busy,
-                                       "Failed to create descriptor pool.");
-      IS.DescriptorPools.push_back(Pool);
-
       std::vector<VkDescriptorSetLayoutBinding> Bindings;
       uint32_t BindingIdx = 0;
       for (const auto &R : S.Resources) {
@@ -335,6 +335,53 @@ public:
             "Failed to create descriptor set layout.");
       IS.DescriptorSetLayouts.push_back(Layout);
     }
+
+    VkPipelineLayoutCreateInfo PipelineCreateInfo = {};
+    PipelineCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    PipelineCreateInfo.setLayoutCount = IS.DescriptorSetLayouts.size();
+    PipelineCreateInfo.pSetLayouts = IS.DescriptorSetLayouts.data();
+    if (vkCreatePipelineLayout(IS.Device, &PipelineCreateInfo, nullptr,
+                               &IS.PipelineLayout))
+      return llvm::createStringError(std::errc::device_or_resource_busy,
+                                     "Failed to create pipeline layout.");
+
+    VkDescriptorSetAllocateInfo DSAllocInfo = {};
+    DSAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    DSAllocInfo.descriptorPool = IS.Pool;
+    DSAllocInfo.descriptorSetCount = IS.DescriptorSetLayouts.size();
+    DSAllocInfo.pSetLayouts = IS.DescriptorSetLayouts.data();
+    assert(IS.DescriptorSets.empty());
+    IS.DescriptorSets.insert(IS.DescriptorSets.begin(),
+                             IS.DescriptorSetLayouts.size(), VkDescriptorSet());
+    llvm::outs() << "Num Descriptor sets: " << IS.DescriptorSetLayouts.size()
+                 << "\n";
+    if (vkAllocateDescriptorSets(IS.Device, &DSAllocInfo,
+                                 IS.DescriptorSets.data()))
+      return llvm::createStringError(std::errc::device_or_resource_busy,
+                                     "Failed to allocate descriptor sets.");
+    llvm::SmallVector<VkWriteDescriptorSet> WriteDescriptors;
+    std::unique_ptr<VkDescriptorBufferInfo[]> BufferInfo =
+        std::unique_ptr<VkDescriptorBufferInfo[]>(
+            new VkDescriptorBufferInfo[P.getDescriptorCount()]);
+    uint32_t UAVIdx = 0;
+    for (uint32_t SetIdx = 0; SetIdx < P.Sets.size(); ++SetIdx) {
+      for (uint32_t RIdx = 0; RIdx < P.Sets[SetIdx].Resources.size();
+           ++RIdx, ++UAVIdx) {
+        // This is a hack... need a better way to do this.
+        BufferInfo[UAVIdx] = {IS.UAVs[UAVIdx].Device.Buffer, 0, VK_WHOLE_SIZE};
+        VkWriteDescriptorSet WDS = {};
+        WDS.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        WDS.dstSet = IS.DescriptorSets[SetIdx];
+        WDS.dstBinding = RIdx;
+        WDS.descriptorCount = 1;
+        WDS.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        WDS.pBufferInfo = &BufferInfo[UAVIdx];
+        WriteDescriptors.push_back(WDS);
+      }
+    }
+    llvm::outs() << "WriteDescriptors: " << WriteDescriptors.size() << "\n";
+    vkUpdateDescriptorSets(IS.Device, WriteDescriptors.size(),
+                           WriteDescriptors.data(), 0, nullptr);
     return llvm::Error::success();
   }
 
@@ -346,11 +393,12 @@ public:
       vkFreeMemory(IS.Device, R.Host.Memory, nullptr);
     }
 
+    vkDestroyPipelineLayout(IS.Device, IS.PipelineLayout, nullptr);
+
     for (auto &L : IS.DescriptorSetLayouts)
       vkDestroyDescriptorSetLayout(IS.Device, L, nullptr);
 
-    for (auto &P : IS.DescriptorPools)
-      vkDestroyDescriptorPool(IS.Device, P, nullptr);
+    vkDestroyDescriptorPool(IS.Device, IS.Pool, nullptr);
 
     vkDestroyCommandPool(IS.Device, IS.CmdPool, nullptr);
     vkDestroyDevice(IS.Device, nullptr);
