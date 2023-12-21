@@ -272,7 +272,8 @@ public:
     return llvm::Error::success();
   }
 
-  llvm::Error executeCommandBuffer(InvocationState &IS) {
+  llvm::Error executeCommandBuffer(InvocationState &IS,
+                                   VkPipelineStageFlags WaitMask = 0) {
     if (vkEndCommandBuffer(IS.CmdBuffer))
       return llvm::createStringError(std::errc::device_or_resource_busy,
                                      "Could not end command buffer.");
@@ -281,6 +282,7 @@ public:
     SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     SubmitInfo.commandBufferCount = 1;
     SubmitInfo.pCommandBuffers = &IS.CmdBuffer;
+    SubmitInfo.pWaitDstStageMask = &WaitMask;
     VkFenceCreateInfo FenceInfo = {};
     FenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     VkFence Fence;
@@ -424,6 +426,59 @@ public:
     return llvm::Error::success();
   }
 
+  llvm::Error createComputeCommands(InvocationState &IS) {
+    for (auto &UAV : IS.UAVs) {
+      VkBufferMemoryBarrier Barrier = {};
+      Barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+      Barrier.buffer = UAV.Device.Buffer;
+      Barrier.size = VK_WHOLE_SIZE;
+      Barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+      Barrier.dstAccessMask =
+          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+      Barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+      Barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+      vkCmdPipelineBarrier(IS.CmdBuffer, VK_PIPELINE_STAGE_HOST_BIT,
+                           VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr,
+                           1, &Barrier, 0, nullptr);
+    }
+    vkCmdBindPipeline(IS.CmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                      IS.Pipeline);
+    vkCmdBindDescriptorSets(IS.CmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                            IS.PipelineLayout, 0, IS.DescriptorSets.size(),
+                            IS.DescriptorSets.data(), 0, 0);
+    vkCmdDispatch(IS.CmdBuffer, 1, 1, 1);
+
+    for (auto &UAV : IS.UAVs) {
+      VkBufferMemoryBarrier Barrier = {};
+      Barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+      Barrier.buffer = UAV.Device.Buffer;
+      Barrier.size = VK_WHOLE_SIZE;
+      Barrier.srcAccessMask =
+          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+      Barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+      Barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+      Barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+      vkCmdPipelineBarrier(IS.CmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                           VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1,
+                           &Barrier, 0, nullptr);
+      VkBufferCopy CopyRegion = {};
+      CopyRegion.size = 32; // TODO: Fix me
+      vkCmdCopyBuffer(IS.CmdBuffer, UAV.Device.Buffer, UAV.Host.Buffer, 1,
+                      &CopyRegion);
+
+      Barrier.buffer = UAV.Host.Buffer;
+      Barrier.size = VK_WHOLE_SIZE;
+      Barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+      Barrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+      Barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+      Barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+      vkCmdPipelineBarrier(IS.CmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                           VK_PIPELINE_STAGE_HOST_BIT, 0, 0, nullptr, 1,
+                           &Barrier, 0, nullptr);
+    }
+    return llvm::Error::success();
+  }
+
   llvm::Error cleanup(InvocationState &IS) {
     for (auto &R : IS.UAVs) {
       vkDestroyBuffer(IS.Device, R.Device.Buffer, nullptr);
@@ -476,6 +531,12 @@ public:
     if (auto Err = createPipeline(P, State))
       return Err;
     llvm::outs() << "Compute pipeline created.\n";
+    if (auto Err = createComputeCommands(State))
+      return Err;
+    llvm::outs() << "Compute commands created.\n";
+    if (auto Err = executeCommandBuffer(State, VK_PIPELINE_STAGE_TRANSFER_BIT))
+      return Err;
+    llvm::outs() << "Executed compute command buffer.\n";
 
     if (auto Err = cleanup(State))
       return Err;
