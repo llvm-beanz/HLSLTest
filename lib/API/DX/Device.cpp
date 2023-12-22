@@ -130,12 +130,14 @@ public:
   }
 
   llvm::Error initializeInfoQueue() {
+#ifndef NDEBUG
     if (auto Err = HR::toError(Device.QueryInterface(&InfoQueue),
                                "Error initializing info queue"))
       return Err;
     InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
     InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
     InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
+#endif
     return llvm::Error::success();
   }
 
@@ -165,7 +167,8 @@ public:
         Ranges.get()[RangeIdx].NumDescriptors = 1;
         Ranges.get()[RangeIdx].BaseShaderRegister = R.DXBinding.Register;
         Ranges.get()[RangeIdx].RegisterSpace = R.DXBinding.Space;
-        Ranges.get()[RangeIdx].OffsetInDescriptorsFromTableStart = DescriptorIdx;
+        Ranges.get()[RangeIdx].OffsetInDescriptorsFromTableStart =
+            DescriptorIdx;
         RangeIdx++;
         DescriptorIdx++;
       }
