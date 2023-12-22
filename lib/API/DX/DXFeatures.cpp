@@ -40,6 +40,7 @@ std::string enumEntryToString(ArrayRef<EnumEntry<T>> EnumValues, T Value) {
   for (const EnumEntry<T> &I : EnumValues)
     if (I.Value == Value)
       return I.Name.str();
+  llvm_unreachable("All cases must be covered");
 }
 } // namespace
 

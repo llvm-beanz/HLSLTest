@@ -146,9 +146,6 @@ public:
         std::unique_ptr<D3D12_DESCRIPTOR_RANGE[]>(
             new D3D12_DESCRIPTOR_RANGE[DescriptorCount]);
 
-    uint32_t Inc = Device->GetDescriptorHandleIncrementSize(
-        D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
     uint32_t RangeIdx = 0;
     for (const auto &D : P.Sets) {
       uint32_t DescriptorIdx = 0;
@@ -168,8 +165,9 @@ public:
         Ranges.get()[RangeIdx].NumDescriptors = 1;
         Ranges.get()[RangeIdx].BaseShaderRegister = R.DXBinding.Register;
         Ranges.get()[RangeIdx].RegisterSpace = R.DXBinding.Space;
-        Ranges.get()[RangeIdx].OffsetInDescriptorsFromTableStart = RangeIdx - StartRangeIdx;
+        Ranges.get()[RangeIdx].OffsetInDescriptorsFromTableStart = DescriptorIdx;
         RangeIdx++;
+        DescriptorIdx++;
       }
       RootParams.push_back(
           D3D12_ROOT_PARAMETER{D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
@@ -180,9 +178,8 @@ public:
     }
 
     CD3DX12_ROOT_SIGNATURE_DESC Desc;
-    Desc.Init(
-        static_cast<uint32_t>(RootParams.size()), RootParams.data(), 0, nullptr,
-        D3D12_ROOT_SIGNATURE_FLAG_NONE);
+    Desc.Init(static_cast<uint32_t>(RootParams.size()), RootParams.data(), 0,
+              nullptr, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 
     CComPtr<ID3DBlob> Signature;
     CComPtr<ID3DBlob> Error;
@@ -350,9 +347,9 @@ public:
     const uint32_t EltSize = R.getElementSize();
     const uint32_t NumElts = R.Size / EltSize;
     const D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {
-        DXGI_FORMAT_UNKNOWN,
+        DXGI_FORMAT_R32_SINT,
         D3D12_UAV_DIMENSION_BUFFER,
-        {D3D12_BUFFER_UAV{0, NumElts, EltSize, 0, D3D12_BUFFER_UAV_FLAG_NONE}}};
+        {D3D12_BUFFER_UAV{0, NumElts, 0, 0, D3D12_BUFFER_UAV_FLAG_NONE}}};
 
     llvm::outs() << "UAV: HeapIdx = " << HeapIdx << " EltSize = " << EltSize
                  << " NumElts = " << NumElts << "\n";
@@ -500,6 +497,8 @@ public:
           IS.DescHeap->GetGPUDescriptorHandleForHeapStart();
       Handle.ptr += Offset;
       IS.CmdList->SetComputeRootDescriptorTable(Idx, Handle);
+      // TODO: This probably computes the wrong offsets if I have multiple
+      // descriptor tables in use.
     }
     IS.CmdList->Dispatch(1, 1, 1);
 
@@ -591,6 +590,7 @@ private:
 public:
   llvm::Error initialize() {
 
+#ifndef NDEBUG
     if (auto Err = HR::toError(D3D12GetDebugInterface(IID_PPV_ARGS(&Debug)),
                                "failed to create D3D12 Debug Interface"))
       return Err;
@@ -600,6 +600,7 @@ public:
       return Err;
     Debug->EnableDebugLayer();
     Debug1->SetEnableGPUBasedValidation(true);
+#endif
 
     if (auto Err = HR::toError(CreateDXGIFactory2(0, IID_PPV_ARGS(&Factory)),
                                "Failed to create DXGI Factory")) {

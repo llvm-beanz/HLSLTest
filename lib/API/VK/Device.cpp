@@ -479,7 +479,31 @@ public:
     return llvm::Error::success();
   }
 
+  llvm::Error readBackData(Pipeline &P, InvocationState &IS) {
+    uint32_t UAVIdx = 0;
+    for (auto &S : P.Sets) {
+      for (auto &R : S.Resources) {
+        if (R.Access != DataAccess::ReadWrite)
+          continue;
+        void *Mapped = nullptr;
+        vkMapMemory(IS.Device, IS.UAVs[UAVIdx].Host.Memory, 0, VK_WHOLE_SIZE, 0,
+                    &Mapped);
+        VkMappedMemoryRange Range = {};
+        Range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+        Range.memory = IS.UAVs[UAVIdx].Host.Memory;
+        Range.offset = 0;
+        Range.size = VK_WHOLE_SIZE;
+        vkInvalidateMappedMemoryRanges(IS.Device, 1, &Range);
+        memcpy(R.Data.get(), Mapped, R.Size);
+        vkUnmapMemory(IS.Device, IS.UAVs[UAVIdx].Host.Memory);
+        UAVIdx++;
+      }
+    }
+    return llvm::Error::success();
+  }
+
   llvm::Error cleanup(InvocationState &IS) {
+    vkQueueWaitIdle(IS.Queue);
     for (auto &R : IS.UAVs) {
       vkDestroyBuffer(IS.Device, R.Device.Buffer, nullptr);
       vkFreeMemory(IS.Device, R.Device.Memory, nullptr);
@@ -537,12 +561,14 @@ public:
     if (auto Err = executeCommandBuffer(State, VK_PIPELINE_STAGE_TRANSFER_BIT))
       return Err;
     llvm::outs() << "Executed compute command buffer.\n";
+    if (auto Err = readBackData(P, State))
+      return Err;
+    llvm::outs() << "Compute pipeline created.\n";
 
     if (auto Err = cleanup(State))
       return Err;
     llvm::outs() << "Cleanup complete.\n";
-    return llvm::createStringError(std::errc::not_supported,
-                                   "VKDevice::executeProgram not supported.");
+    return llvm::Error::success();
   }
 };
 
