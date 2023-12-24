@@ -50,6 +50,7 @@ private:
     llvm::SmallVector<VkDescriptorSetLayout> DescriptorSetLayouts;
     llvm::SmallVector<UAVRef> UAVs;
     llvm::SmallVector<VkDescriptorSet> DescriptorSets;
+    llvm::SmallVector<VkBufferView> BufferViews;
   };
 
 public:
@@ -221,8 +222,8 @@ public:
 
     auto ExDeviceBuf = createBuffer(
         IS,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT |
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, R.Size);
     if (!ExDeviceBuf)
       return ExDeviceBuf.takeError();
@@ -305,7 +306,7 @@ public:
 
   llvm::Error createDescriptorSets(Pipeline &P, InvocationState &IS) {
     VkDescriptorPoolSize PoolSize = {};
-    PoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    PoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
     PoolSize.descriptorCount = P.getDescriptorCount();
     VkDescriptorPoolCreateInfo PoolCreateInfo;
     PoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -322,7 +323,7 @@ public:
         (void)R; // Todo: set this correctly for the data type.
         VkDescriptorSetLayoutBinding Binding = {};
         Binding.binding = BindingIdx++;
-        Binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        Binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
         Binding.descriptorCount = 1;
         Binding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
         Bindings.push_back(Binding);
@@ -332,6 +333,7 @@ public:
           VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
       LayoutCreateInfo.bindingCount = Bindings.size();
       LayoutCreateInfo.pBindings = Bindings.data();
+      llvm::outs() << "Binding " << Bindings.size() << " descriptors.\n";
       VkDescriptorSetLayout Layout;
       if (vkCreateDescriptorSetLayout(IS.Device, &LayoutCreateInfo, nullptr,
                                       &Layout))
@@ -365,22 +367,31 @@ public:
       return llvm::createStringError(std::errc::device_or_resource_busy,
                                      "Failed to allocate descriptor sets.");
     llvm::SmallVector<VkWriteDescriptorSet> WriteDescriptors;
-    std::unique_ptr<VkDescriptorBufferInfo[]> BufferInfo =
-        std::unique_ptr<VkDescriptorBufferInfo[]>(
-            new VkDescriptorBufferInfo[P.getDescriptorCount()]);
+    assert(IS.BufferViews.empty());
+    IS.BufferViews.insert(IS.BufferViews.begin(), P.getDescriptorCount(), VkBufferView());
     uint32_t UAVIdx = 0;
     for (uint32_t SetIdx = 0; SetIdx < P.Sets.size(); ++SetIdx) {
       for (uint32_t RIdx = 0; RIdx < P.Sets[SetIdx].Resources.size();
            ++RIdx, ++UAVIdx) {
         // This is a hack... need a better way to do this.
-        BufferInfo[UAVIdx] = {IS.UAVs[UAVIdx].Device.Buffer, 0, VK_WHOLE_SIZE};
+        VkBufferViewCreateInfo ViewCreateInfo = {};
+        ViewCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+        ViewCreateInfo.buffer = IS.UAVs[UAVIdx].Device.Buffer;
+        ViewCreateInfo.format = VK_FORMAT_R32_SINT;
+        ViewCreateInfo.range = VK_WHOLE_SIZE;
+        if (vkCreateBufferView(IS.Device, &ViewCreateInfo, nullptr,
+                               &IS.BufferViews[UAVIdx]))
+          return llvm::createStringError(std::errc::device_or_resource_busy,
+                                         "Failed to create buffer view.");
         VkWriteDescriptorSet WDS = {};
         WDS.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         WDS.dstSet = IS.DescriptorSets[SetIdx];
         WDS.dstBinding = RIdx;
         WDS.descriptorCount = 1;
-        WDS.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        WDS.pBufferInfo = &BufferInfo[UAVIdx];
+        WDS.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        WDS.pTexelBufferView = &IS.BufferViews[UAVIdx];
+        llvm::outs() << "Updating Descriptor [" << UAVIdx << "] { " << SetIdx
+                     << ", " << RIdx << " }\n";
         WriteDescriptors.push_back(WDS);
       }
     }
@@ -504,6 +515,9 @@ public:
 
   llvm::Error cleanup(InvocationState &IS) {
     vkQueueWaitIdle(IS.Queue);
+    for (auto &V : IS.BufferViews)
+      vkDestroyBufferView(IS.Device, V, nullptr);
+    
     for (auto &R : IS.UAVs) {
       vkDestroyBuffer(IS.Device, R.Device.Buffer, nullptr);
       vkFreeMemory(IS.Device, R.Device.Memory, nullptr);
