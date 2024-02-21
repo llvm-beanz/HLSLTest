@@ -1,0 +1,10 @@
+---
+DescriptorSets:
+  - Resources:
+    - Access: ReadWrite
+      Format: Int32
+      Data: [ 0, 0, 1, 2]
+      DirectXBinding:
+        Register: 0
+        Space: 0
+...
