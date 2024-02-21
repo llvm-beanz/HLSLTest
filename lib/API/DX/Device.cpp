@@ -349,8 +349,19 @@ public:
 
     const uint32_t EltSize = R.getElementSize();
     const uint32_t NumElts = R.Size / EltSize;
+    DXGI_FORMAT EltFormat = DXGI_FORMAT_UNKNOWN;
+    switch (R.Format) {
+    case DataFormat::Int32 :
+      EltFormat = DXGI_FORMAT_R32_SINT;
+      break;
+    case DataFormat::Float32:
+      EltFormat = DXGI_FORMAT_R32_FLOAT;
+      break;
+    default :
+        llvm_unreachable("Unsupported Resource format specified");
+    }
     const D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {
-        DXGI_FORMAT_R32_SINT,
+        EltFormat,
         D3D12_UAV_DIMENSION_BUFFER,
         {D3D12_BUFFER_UAV{0, NumElts, 0, 0, D3D12_BUFFER_UAV_FLAG_NONE}}};
 

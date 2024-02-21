@@ -46,7 +46,7 @@ std::unique_ptr<MemoryBuffer> readFile(const std::string &Path) {
 
 int main(int ArgC, char **ArgV) {
   InitLLVM X(ArgC, ArgV);
-  cl::ParseCommandLineOptions(ArgC, ArgV, "GPU API Query Tool");
+  cl::ParseCommandLineOptions(ArgC, ArgV, "GPU Execution Tool");
 
   ExitOnError ExitOnErr("gpu-exec: error: ");
   ExitOnErr(Device::initialize());
@@ -55,11 +55,14 @@ int main(int ArgC, char **ArgV) {
 
   // Try to guess the API by reading the shader binary.
   if (APIToUse == GPUAPI::Unknown) {
-    if (ShaderBuf->getBuffer().startswith("DXBC"))
+    if (ShaderBuf->getBuffer().starts_with("DXBC"))
       APIToUse = GPUAPI::DirectX;
-    if (*reinterpret_cast<const uint32_t *>(ShaderBuf->getBuffer().data()) ==
-        0x07230203)
-      APIToUse = GPUAPI::Vulkan;
+    outs() << "Using DirectX API\n";
+    if (*reinterpret_cast<const uint32_t*>(ShaderBuf->getBuffer().data()) ==
+        0x07230203) {
+        APIToUse = GPUAPI::Vulkan;
+        outs() << "Using Vulkan API\n";
+    }
   }
 
   if (APIToUse == GPUAPI::Unknown)
