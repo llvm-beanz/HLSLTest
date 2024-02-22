@@ -308,7 +308,7 @@ public:
     VkDescriptorPoolSize PoolSize = {};
     PoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
     PoolSize.descriptorCount = P.getDescriptorCount();
-    VkDescriptorPoolCreateInfo PoolCreateInfo;
+    VkDescriptorPoolCreateInfo PoolCreateInfo = {};
     PoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     PoolCreateInfo.poolSizeCount = 1;
     PoolCreateInfo.pPoolSizes = &PoolSize;
