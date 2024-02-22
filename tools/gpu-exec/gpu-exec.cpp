@@ -55,10 +55,10 @@ int main(int ArgC, char **ArgV) {
 
   // Try to guess the API by reading the shader binary.
   if (APIToUse == GPUAPI::Unknown) {
-    if (ShaderBuf->getBuffer().starts_with("DXBC"))
+    if (ShaderBuf->getBuffer().starts_with("DXBC")) {
       APIToUse = GPUAPI::DirectX;
-    outs() << "Using DirectX API\n";
-    if (*reinterpret_cast<const uint32_t*>(ShaderBuf->getBuffer().data()) ==
+      outs() << "Using DirectX API\n";
+    } else if (*reinterpret_cast<const uint32_t*>(ShaderBuf->getBuffer().data()) ==
         0x07230203) {
         APIToUse = GPUAPI::Vulkan;
         outs() << "Using Vulkan API\n";
