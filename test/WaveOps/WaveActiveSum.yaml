@@ -1,3 +1,4 @@
+# RUN: dxc -T cs_6_0 -Fo %t.dxil %S/Inputs/WaveActiveSum.hlsl
 ---
 DescriptorSets:
   - Resources:

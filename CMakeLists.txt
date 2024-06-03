@@ -9,6 +9,9 @@ list(INSERT CMAKE_MODULE_PATH 0
   )
 
 set(HLSLTEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(HLSLTEST_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+set(HLSLTEST_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include
                     ${CMAKE_CURRENT_BINARY_DIR}/include)
 
@@ -51,3 +54,5 @@ endif ()
 
 add_subdirectory(lib)
 add_subdirectory(tools)
+
+add_subdirectory(test)

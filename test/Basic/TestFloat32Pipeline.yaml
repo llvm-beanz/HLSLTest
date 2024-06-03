@@ -1,0 +1,25 @@
+# RUN: dxc -T cs_6_0 -Fo %t.dxil %S/Inputs/TestFloat32.hlsl
+# RUN: %gpu-exec %s %t.dxil | FileCheck %s
+---
+DescriptorSets:
+  - Resources:
+    - Access: ReadWrite
+      Format: Float32
+      Data: [ 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8 ]
+      DirectXBinding:
+        Register: 0
+        Space: 0
+    - Access: ReadWrite
+      Format: Float32
+      Data: [ 9.9, 10.1, 11.1, 12.2, 13.3, 14.4, 15.5, 16.6]
+      DirectXBinding:
+        Register: 1
+        Space: 0
+...
+
+# CHECK: Access: ReadWrite
+# CHECK: Format: Float32
+# CHECK: Data: [ 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8 ]
+# CHECK: Access: ReadWrite
+# CHECK: Format: Float32
+# CHECK: Data: [ 5.4, 6.5, 7.6, 8.7, 9.8, 10.9, 12, 13.1 ]
