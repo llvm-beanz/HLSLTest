@@ -41,6 +41,9 @@ tools = [
     ToolSubst("FileCheck", FindTool("FileCheck"))
 ]
 
+if os.path.exists(config.hlsltest_compiler):
+  tools.append(ToolSubst("dxc", config.hlsltest_compiler))
+
 llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
 
 api_query = os.path.join(config.llvm_tools_dir, "api-query")

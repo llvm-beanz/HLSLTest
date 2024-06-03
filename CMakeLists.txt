@@ -11,6 +11,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 set(HLSLTEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(HLSLTEST_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(HLSLTEST_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(HLSLTEST_COMPILER "dxc" CACHE STRING "Compiler to use for testing (uses dxc from PATH if unset)")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include
                     ${CMAKE_CURRENT_BINARY_DIR}/include)
