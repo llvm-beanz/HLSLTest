@@ -71,8 +71,9 @@ private:
 public:
   VKDevice(VkPhysicalDevice D) : Device(D) {
     vkGetPhysicalDeviceProperties(Device, &Props);
-    Description =
-        llvm::StringRef(Props.deviceName, VK_MAX_PHYSICAL_DEVICE_NAME_SIZE);
+    uint64_t StrSz =
+        strnlen(Props.deviceName, VK_MAX_PHYSICAL_DEVICE_NAME_SIZE);
+    Description = std::string(Props.deviceName, StrSz);
   }
   VKDevice(const VKDevice &) = default;
 
@@ -102,19 +103,16 @@ public:
   }
 
   void printExtra(llvm::raw_ostream &OS) override {
-    OS << "  Layers: {\n";
+    OS << "  Layers:\n";
     for (auto Layer : getLayers()) {
-      OS << "    {\n";
-      OS << "      LayerName: "
+      OS << "  - LayerName: "
          << llvm::StringRef(Layer.layerName, VK_MAX_EXTENSION_NAME_SIZE)
          << "\n";
-      OS << "      SpecVersion: " << Layer.specVersion << "\n";
-      OS << "      ImplVersion: " << Layer.implementationVersion << "\n";
-      OS << "      LayerName: "
+      OS << "    SpecVersion: " << Layer.specVersion << "\n";
+      OS << "    ImplVersion: " << Layer.implementationVersion << "\n";
+      OS << "    LayerName: "
          << llvm::StringRef(Layer.description, VK_MAX_DESCRIPTION_SIZE) << "\n";
-      OS << "    }\n";
     }
-    OS << "  }\n";
   }
 
   private:

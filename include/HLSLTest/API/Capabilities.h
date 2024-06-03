@@ -129,7 +129,7 @@ public:
   std::string getValueSting() const { return CapabilityData->toString(); }
 
   void print(llvm::raw_ostream &OS) const {
-    OS << getName() << " = " << getValueSting();
+    OS << getName() << ": " << getValueSting();
   }
 };
 

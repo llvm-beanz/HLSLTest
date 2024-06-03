@@ -94,7 +94,8 @@ public:
   DXDevice(CComPtr<IDXGIAdapter1> A, CComPtr<ID3D12Device> D,
            DXGI_ADAPTER_DESC1 Desc)
       : Adapter(A), Device(D) {
-    Description = StringFromWString(std::wstring(Desc.Description, 128));
+    uint64_t StrSz = wcsnlen(Desc.Description, 128);
+    Description = StringFromWString(std::wstring(Desc.Description, StrSz));
   }
   DXDevice(const DXDevice &) = default;
 

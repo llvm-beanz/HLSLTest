@@ -26,22 +26,20 @@ int main(int ArgC, char **ArgV) {
 
   ExitOnError ExitOnErr("api-query: error: ");
 
-  outs() << "Initializing devices...\n";
   if (auto Err = Device::initialize())
     logAllUnhandledErrors(std::move(Err), errs(), "api-query: error: ");
 
+  outs() << "Devics:\n";
   for (const auto &D : Device::devices()) {
-    outs() << "Device: {\n";
-    outs() << "  API: " << D->getAPIName() << "\n";
+    outs() << "- API: " << D->getAPIName() << "\n";
     outs() << "  Description: " << D->getDescription() << "\n";
-    outs() << "  Features: {\n";
+    outs() << "  Features: \n";
     for (const auto &C : D->getCapabilities()) {
       outs() << "    ";
       C.second.print(outs());
       outs() << "\n";
     }
     D->printExtra(outs());
-    outs() << "  }\n}\n";
   }
   return 0;
 }
