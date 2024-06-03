@@ -1,6 +1,14 @@
 # HLSLTest
 Experimental Runtime test suite for HLSL
 
+# Prerequisites
+
+This project requires being able to locally build LLVM and leverages LLVM's build infrastructure. It also requires installing the `pyyaml` Python package. You can install `pyyaml` by running:
+
+```shell
+pip3 install pyyaml
+```
+
 # Adding to LLVM Build
 
 Add the following to the CMake options:
