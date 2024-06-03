@@ -1,4 +1,8 @@
-# RUN: dxc -T cs_6_0 -Fo %t.dxil %S/Inputs/Test.hlsl
+# RUN: %if DirectX %{ dxc -T cs_6_0 -Fo %t.dxil %S/Inputs/Test.hlsl %}
+# RUN: %if DirectX %{ %gpu-exec %s %t.dxil | FileCheck %s %}
+# RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -Fo %t.spv %S/Inputs/Test.hlsl %}
+# RUN: %if Vulkan %{ %gpu-exec %s %t.spv | FileCheck %s %}
+
 ---
 DescriptorSets:
   - Resources:
@@ -15,3 +19,10 @@ DescriptorSets:
         Register: 1
         Space: 0
 ...
+
+# CHECK: Access: ReadWrite
+# CHECK: Format: Int32
+# CHECK: Data: [ 1, 2, 3, 4, 5, 6, 7, 8 ]
+# CHECK: Access: ReadWrite
+# CHECK: Format: Int32
+# CHECK: Data: [ 1, 2, 3, 4, 5, 6, 7, 8 ]

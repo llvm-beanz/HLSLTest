@@ -1,4 +1,8 @@
-# RUN: dxc -T cs_6_0 -Fo %t.dxil %S/Inputs/WaveActiveSum.hlsl
+# RUN: %if DirectX %{ dxc -T cs_6_0 -Fo %t.dxil %S/Inputs/WaveActiveSum.hlsl %}
+# RUN: %if DirectX %{ %gpu-exec %s %t.dxil | FileCheck %s %}
+# RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -fspv-target-env=vulkan1.1 -Fo %t.spv %S/Inputs/WaveActiveSum.hlsl %}
+# RUN: %if Vulkan %{ %gpu-exec %s %t.spv | FileCheck %s %}
+# XFAIL: Vulkan
 ---
 DescriptorSets:
   - Resources:
@@ -9,3 +13,5 @@ DescriptorSets:
         Register: 0
         Space: 0
 ...
+
+# CHECK: Data: [ 42, 42, 40, 40 ]
