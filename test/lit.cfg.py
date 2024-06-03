@@ -7,6 +7,7 @@ import sys
 import re
 import platform
 import subprocess
+import yaml
 
 import lit.util
 import lit.formats
@@ -41,3 +42,13 @@ tools = [
 ]
 
 llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
+
+api_query = os.path.join(config.llvm_tools_dir, "api-query")
+query_string = subprocess.check_output(api_query)
+devices = yaml.safe_load(query_string)
+
+for device in devices['Devices']:
+  if device['API'] == "DirectX":
+    config.available_features.add("DirectX")
+  if device['API'] == "Vulkan":
+    config.available_features.add("Vulkan")

@@ -29,7 +29,7 @@ int main(int ArgC, char **ArgV) {
   if (auto Err = Device::initialize())
     logAllUnhandledErrors(std::move(Err), errs(), "api-query: error: ");
 
-  outs() << "Devics:\n";
+  outs() << "Devices:\n";
   for (const auto &D : Device::devices()) {
     outs() << "- API: " << D->getAPIName() << "\n";
     outs() << "  Description: " << D->getDescription() << "\n";

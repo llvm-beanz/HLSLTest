@@ -105,13 +105,12 @@ public:
   void printExtra(llvm::raw_ostream &OS) override {
     OS << "  Layers:\n";
     for (auto Layer : getLayers()) {
-      OS << "  - LayerName: "
-         << llvm::StringRef(Layer.layerName, VK_MAX_EXTENSION_NAME_SIZE)
-         << "\n";
+      uint64_t Sz = strnlen(Layer.layerName, VK_MAX_EXTENSION_NAME_SIZE);
+      OS << "  - LayerName: " << llvm::StringRef(Layer.layerName, Sz) << "\n";
       OS << "    SpecVersion: " << Layer.specVersion << "\n";
       OS << "    ImplVersion: " << Layer.implementationVersion << "\n";
-      OS << "    LayerName: "
-         << llvm::StringRef(Layer.description, VK_MAX_DESCRIPTION_SIZE) << "\n";
+      Sz = strnlen(Layer.description, VK_MAX_DESCRIPTION_SIZE);
+      OS << "    LayerDesc: " << llvm::StringRef(Layer.description, Sz) << "\n";
     }
   }
 

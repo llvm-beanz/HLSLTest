@@ -1,5 +1,6 @@
 # RUN: dxc -T cs_6_0 -Fo %t.dxil %S/Inputs/TestFloat32.hlsl
 # RUN: %gpu-exec %s %t.dxil | FileCheck %s
+# REQUIRES: DirectX
 ---
 DescriptorSets:
   - Resources:
