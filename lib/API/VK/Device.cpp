@@ -18,6 +18,19 @@
 
 using namespace hlsltest;
 
+static VkFormat getVKFormat(DataFormat Format) {
+  switch (Format) {
+  case DataFormat::Int32:
+    return VK_FORMAT_R32_SINT;
+    break;
+  case DataFormat::Float32:
+    return VK_FORMAT_R32_SFLOAT;
+    break;
+  default:
+    llvm_unreachable("Unsupported Resource format specified");
+  }
+  return VK_FORMAT_UNDEFINED;
+}
 namespace {
 
 class VKDevice : public hlsltest::Device {
@@ -151,7 +164,7 @@ public:
 
     VkDeviceQueueCreateInfo QueueInfo = {};
     float QueuePriority = 0.0f;
-    QueueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    QueueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     QueueInfo.queueFamilyIndex = QueueIdx;
     QueueInfo.queueCount = 1;
     QueueInfo.pQueuePriorities = &QueuePriority;
@@ -196,13 +209,12 @@ public:
 
   llvm::Expected<BufferRef> createBuffer(InvocationState &IS,
                                          VkBufferUsageFlags Usage,
-                                         VkMemoryPropertyFlags Flags,
+                                         VkMemoryPropertyFlags MemoryFlags,
                                          size_t Size, void *Data = nullptr) {
     VkBuffer Buffer;
     VkDeviceMemory Memory;
     VkBufferCreateInfo BufferInfo = {};
     BufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    BufferInfo.flags = Flags;
     BufferInfo.size = Size;
     BufferInfo.usage = Usage;
     BufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -223,8 +235,8 @@ public:
     for (; MemIdx < MemProperties.memoryTypeCount;
          ++MemIdx, MemReqs.memoryTypeBits >>= 1) {
       if ((MemReqs.memoryTypeBits & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) &&
-          ((MemProperties.memoryTypes[MemIdx].propertyFlags & Flags) ==
-           Flags)) {
+          ((MemProperties.memoryTypes[MemIdx].propertyFlags & MemoryFlags) ==
+           MemoryFlags)) {
         break;
       }
     }
@@ -424,9 +436,10 @@ public:
            ++RIdx, ++UAVIdx) {
         // This is a hack... need a better way to do this.
         VkBufferViewCreateInfo ViewCreateInfo = {};
+        VkFormat Format = getVKFormat(P.Sets[SetIdx].Resources[RIdx].Format);
         ViewCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
         ViewCreateInfo.buffer = IS.UAVs[UAVIdx].Device.Buffer;
-        ViewCreateInfo.format = VK_FORMAT_R32_SINT;
+        ViewCreateInfo.format = Format;
         ViewCreateInfo.range = VK_WHOLE_SIZE;
         if (vkCreateBufferView(IS.Device, &ViewCreateInfo, nullptr,
                                &IS.BufferViews[UAVIdx]))

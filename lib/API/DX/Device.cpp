@@ -39,6 +39,20 @@ using namespace hlsltest;
 template <> char CapabilityValueEnum<directx::ShaderModel>::ID = 0;
 template <> char CapabilityValueEnum<directx::RootSignature>::ID = 0;
 
+static DXGI_FORMAT getDXFormat(DataFormat Format) {
+  switch (Format) {
+  case DataFormat::Int32:
+    return DXGI_FORMAT_R32_SINT;
+    break;
+  case DataFormat::Float32:
+    return DXGI_FORMAT_R32_FLOAT;
+    break;
+  default:
+    llvm_unreachable("Unsupported Resource format specified");
+  }
+  return DXGI_FORMAT_UNKNOWN;
+}
+
 namespace {
 
 std::string StringFromWString(const std::wstring &In) {
@@ -349,17 +363,7 @@ public:
 
     const uint32_t EltSize = R.getElementSize();
     const uint32_t NumElts = R.Size / EltSize;
-    DXGI_FORMAT EltFormat = DXGI_FORMAT_UNKNOWN;
-    switch (R.Format) {
-    case DataFormat::Int32 :
-      EltFormat = DXGI_FORMAT_R32_SINT;
-      break;
-    case DataFormat::Float32:
-      EltFormat = DXGI_FORMAT_R32_FLOAT;
-      break;
-    default :
-        llvm_unreachable("Unsupported Resource format specified");
-    }
+    DXGI_FORMAT EltFormat = getDXFormat(R.Format);
     const D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {
         EltFormat,
         D3D12_UAV_DIMENSION_BUFFER,
