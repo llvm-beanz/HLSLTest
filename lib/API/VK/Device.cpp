@@ -478,6 +478,7 @@ public:
     VkComputePipelineCreateInfo PipelineCreateInfo = {};
     PipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     PipelineCreateInfo.stage = StageInfo;
+    PipelineCreateInfo.layout = IS.PipelineLayout;
     if (vkCreateComputePipelines(IS.Device, IS.PipelineCache, 1,
                                  &PipelineCreateInfo, nullptr, &IS.Pipeline))
       return llvm::createStringError(std::errc::device_or_resource_busy,
