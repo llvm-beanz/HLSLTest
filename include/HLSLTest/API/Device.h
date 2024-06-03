@@ -20,6 +20,10 @@
 #include <memory>
 #include <string>
 
+namespace llvm {
+  class raw_ostream;
+}
+
 namespace hlsltest {
 
 struct Pipeline;
@@ -33,6 +37,7 @@ public:
   virtual llvm::StringRef getAPIName() const = 0;
   virtual GPUAPI getAPI() const = 0;
   virtual llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) = 0;
+  virtual void printExtra(llvm::raw_ostream &OS) {}
 
   virtual ~Device() = 0;
 

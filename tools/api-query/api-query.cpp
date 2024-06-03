@@ -40,6 +40,7 @@ int main(int ArgC, char **ArgV) {
       C.second.print(outs());
       outs() << "\n";
     }
+    D->printExtra(outs());
     outs() << "  }\n}\n";
   }
   return 0;

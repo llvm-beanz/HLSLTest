@@ -25,6 +25,8 @@ private:
   VkPhysicalDevice Device;
   VkPhysicalDeviceProperties Props;
   Capabilities Caps;
+  using LayerVector = std::vector<VkLayerProperties>;
+  LayerVector Layers;
 
   struct BufferRef {
     VkBuffer Buffer;
@@ -72,6 +74,38 @@ public:
     return Caps;
   }
 
+  const LayerVector &getLayers() {
+    if (Layers.empty())
+      queryLayers();
+    return Layers;
+  }
+
+  bool isLayerSupported(llvm::StringRef QueryName) {
+    for (auto Layer : getLayers()) {
+      if (Layer.layerName == QueryName)
+        return true;
+    }
+    return false;
+  }
+
+  void printExtra(llvm::raw_ostream &OS) override {
+    OS << "  Layers: {\n";
+    for (auto Layer : getLayers()) {
+      OS << "    {\n";
+      OS << "      LayerName: "
+         << llvm::StringRef(Layer.layerName, VK_MAX_EXTENSION_NAME_SIZE)
+         << "\n";
+      OS << "      SpecVersion: " << Layer.specVersion << "\n";
+      OS << "      ImplVersion: " << Layer.implementationVersion << "\n";
+      OS << "      LayerName: "
+         << llvm::StringRef(Layer.description, VK_MAX_DESCRIPTION_SIZE) << "\n";
+      OS << "    }\n";
+    }
+    OS << "  }\n";
+  }
+
+  private:
+
   void queryCapabilities() {
     VkPhysicalDeviceFeatures Features;
     vkGetPhysicalDeviceFeatures(Device, &Features);
@@ -81,6 +115,21 @@ public:
       std::make_pair(#Name, make_capability<bool>(#Name, Features.Name)));
 #include "VKFeatures.def"
   }
+
+
+  void queryLayers() {
+    assert(Layers.empty() && "Should not be called twice!");
+    uint32_t LayerCount;
+    vkEnumerateInstanceLayerProperties(&LayerCount, nullptr);
+
+    if (LayerCount == 0)
+      return;
+
+    Layers.insert(Layers.begin(), LayerCount, VkLayerProperties());
+    vkEnumerateInstanceLayerProperties(&LayerCount, Layers.data());
+  }
+
+  public:
 
   llvm::Error createDevice(InvocationState &IS) {
 
@@ -610,6 +659,13 @@ public:
     VkInstanceCreateInfo CreateInfo = {};
     CreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     CreateInfo.pApplicationInfo = &AppInfo;
+    
+    // TODO: This is a bit hacky but matches what I did in DX.
+    #ifndef NDEBUG
+    const char *ValidationLayer = "VK_LAYER_KHRONOS_validation";
+    CreateInfo.ppEnabledLayerNames = &ValidationLayer;
+    CreateInfo.enabledLayerCount = 1;
+    #endif
 
     VkResult Res = vkCreateInstance(&CreateInfo, NULL, &Instance);
     if (Res == VK_ERROR_INCOMPATIBLE_DRIVER)
