@@ -10,6 +10,16 @@ if (HLSLTEST_ENABLE_D3D12)
   list(APPEND api_headers PRIVATE ${DIRECTX_HEADERS_PATH}/include/directx)
 endif()
 
+if (APPLE)
+  list(APPEND api_sources MTL/MTLDevice.cpp)
+  list(APPEND api_libraries "-framework Metal"
+                            "-framework MetalKit"
+                            "-framework AppKit"
+                            "-framework Foundation"
+                            "-framework QuartzCore")
+  list(APPEND api_headers PRIVATE ${METAL_INCLUDE_DIRS})
+endif()
+
 add_hlsl_library(API
   Capabilities.cpp
   Device.cpp

@@ -12,12 +12,19 @@
 #include "HLSLTest/API/API.h"
 #include "HLSLTest/API/Device.h"
 #include "HLSLTest/API/Pipeline.h"
+#include "HLSLTest/Config.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <string>
+
+#if APPLE
+#include <thread>
+#include <dispatch/dispatch.h>
+#include <CoreFoundation/CoreFoundation.h>
+#endif
 
 using namespace llvm;
 using namespace hlsltest;
@@ -33,7 +40,8 @@ static cl::opt<std::string> InputShader(cl::Positional,
 static cl::opt<GPUAPI>
     APIToUse("api", cl::desc("GPU API to use"), cl::init(GPUAPI::Unknown),
              cl::values(clEnumValN(GPUAPI::DirectX, "dx", "DirectX"),
-                        clEnumValN(GPUAPI::Vulkan, "vk", "Vulkan")));
+                        clEnumValN(GPUAPI::Vulkan, "vk", "Vulkan"),
+                        clEnumValN(GPUAPI::Metal, "mtl", "Metal")));
 
 std::unique_ptr<MemoryBuffer> readFile(const std::string &Path) {
   ExitOnError ExitOnErr("gpu-exec: error: ");
@@ -44,10 +52,25 @@ std::unique_ptr<MemoryBuffer> readFile(const std::string &Path) {
   return std::move(FileOrErr.get());
 }
 
+int run();
+
 int main(int ArgC, char **ArgV) {
   InitLLVM X(ArgC, ArgV);
   cl::ParseCommandLineOptions(ArgC, ArgV, "GPU Execution Tool");
 
+#if APPLE
+  std::thread([] { exit(run()); }).detach();
+  CFRunLoopRun();
+#else
+  if (run()) {
+    errs() << "No device available.";
+    return 1;
+  }
+#endif
+  return 0;
+}
+
+int run() {
   ExitOnError ExitOnErr("gpu-exec: error: ");
   ExitOnErr(Device::initialize());
 
@@ -58,10 +81,13 @@ int main(int ArgC, char **ArgV) {
     if (ShaderBuf->getBuffer().starts_with("DXBC")) {
       APIToUse = GPUAPI::DirectX;
       outs() << "Using DirectX API\n";
-    } else if (*reinterpret_cast<const uint32_t*>(ShaderBuf->getBuffer().data()) ==
-        0x07230203) {
-        APIToUse = GPUAPI::Vulkan;
-        outs() << "Using Vulkan API\n";
+    } else if (*reinterpret_cast<const uint32_t *>(
+                   ShaderBuf->getBuffer().data()) == 0x07230203) {
+      APIToUse = GPUAPI::Vulkan;
+      outs() << "Using Vulkan API\n";
+    } else if (ShaderBuf->getBuffer().starts_with("MTLB")) {
+      APIToUse = GPUAPI::Metal;
+      outs() << "Using Metal API\n";
     }
   }
 
@@ -85,6 +111,5 @@ int main(int ArgC, char **ArgV) {
     YOut << PipelineDesc;
     return 0;
   }
-  errs() << "No device available.";
   return 1;
 }

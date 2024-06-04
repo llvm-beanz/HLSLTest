@@ -1,0 +1,247 @@
+#define NS_PRIVATE_IMPLEMENTATION
+#define CA_PRIVATE_IMPLEMENTATION
+#define MTL_PRIVATE_IMPLEMENTATION
+#include "Foundation/Foundation.hpp"
+#include "Metal/Metal.hpp"
+#include "QuartzCore/QuartzCore.hpp"
+
+#define IR_RUNTIME_METALCPP
+#define IR_PRIVATE_IMPLEMENTATION
+#include "metal_irconverter_runtime.h"
+
+#include "HLSLTest/API/Device.h"
+#include "HLSLTest/API/Pipeline.h"
+
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
+
+using namespace hlsltest;
+
+static llvm::Error toError(NS::Error *Err) {
+  if (!Err)
+    return llvm::Error::success();
+  std::error_code EC =
+      std::error_code(static_cast<int>(Err->code()), std::system_category());
+  llvm::SmallString<256> ErrMsg;
+  llvm::raw_svector_ostream OS(ErrMsg);
+  OS << Err->localizedDescription()->utf8String() << ": ";
+  OS << Err->localizedFailureReason()->utf8String();
+  return llvm::createStringError(EC, ErrMsg);
+}
+
+namespace {
+class MTLDevice : public hlsltest::Device {
+  Capabilities Caps;
+  MTL::Device *Device;
+
+  struct InvocationState {
+    InvocationState() {}
+    ~InvocationState() {
+      for (auto B : Buffers)
+        B->release();
+      if (Fn)
+        Fn->release();
+      if (Lib)
+        Lib->release();
+      if (PipelineState)
+        PipelineState->release();
+      if (Queue)
+        Queue->release();
+    }
+
+    MTL::CommandQueue *Queue = nullptr;
+    MTL::Library *Lib = nullptr;
+    MTL::Function *Fn = nullptr;
+    MTL::ComputePipelineState *PipelineState;
+    MTL::Buffer *ArgBuffer;
+    llvm::SmallVector<MTL::Buffer *> Buffers;
+    dispatch_semaphore_t Semaphore;
+  };
+
+  llvm::Error loadShaders(InvocationState &IS, llvm::StringRef Program) {
+    NS::Error *Error = nullptr;
+    dispatch_data_t data = dispatch_data_create(Program.data(), Program.size(),
+                                                dispatch_get_main_queue(),
+                                                ^{
+                                                });
+    IS.Lib = Device->newLibrary(data, &Error);
+    if (Error)
+      return toError(Error);
+
+    IS.Fn =
+        IS.Lib->newFunction(NS::String::string("main", NS::UTF8StringEncoding));
+    IS.PipelineState = Device->newComputePipelineState(IS.Fn, &Error);
+    if (Error)
+      return toError(Error);
+
+    return llvm::Error::success();
+  }
+
+  llvm::Error createUAV(Resource &R, InvocationState &IS,
+                        const uint32_t HeapIdx) {
+    MTL::Buffer *NewBuffer =
+        Device->newBuffer(R.Size, MTL::ResourceStorageModeManaged);
+    memcpy(NewBuffer->contents(), R.Data.get(), R.Size);
+    NewBuffer->didModifyRange(NS::Range::Make(0, R.Size));
+    IS.Buffers.push_back(NewBuffer);
+
+    auto *TablePtr = (IRDescriptorTableEntry *)IS.ArgBuffer->contents();
+    IRDescriptorTableSetBuffer(&TablePtr[0], NewBuffer->gpuAddress(), 0);
+
+    return llvm::Error::success();
+  }
+
+  llvm::Error createSRV(Resource &R, InvocationState &IS,
+                        const uint32_t HeapIdx) {
+    return llvm::createStringError(std::errc::not_supported,
+                                   "MTLDevice::createSRV not supported.");
+  }
+
+  llvm::Error createCBV(Resource &R, InvocationState &IS,
+                        const uint32_t HeapIdx) {
+    return llvm::createStringError(std::errc::not_supported,
+                                   "MTLDevice::createCBV not supported.");
+  }
+
+  llvm::Error createBuffers(Pipeline &P, InvocationState &IS) {
+
+    size_t TableSize = sizeof(IRDescriptorTableEntry) * P.getDescriptorCount();
+    IS.ArgBuffer = Device->newBuffer(TableSize, MTL::ResourceStorageModeManaged);
+
+    uint32_t HeapIndex = 0;
+    for (auto &D : P.Sets) {
+      for (auto &R : D.Resources) {
+        switch (R.Access) {
+        case DataAccess::ReadOnly:
+          if (auto Err = createSRV(R, IS, HeapIndex++))
+            return Err;
+          break;
+        case DataAccess::ReadWrite:
+          if (auto Err = createUAV(R, IS, HeapIndex++))
+            return Err;
+          break;
+        case DataAccess::Constant:
+          if (auto Err = createCBV(R, IS, HeapIndex++))
+            return Err;
+          break;
+        }
+      }
+    }
+    IS.ArgBuffer->didModifyRange(NS::Range::Make(0, IS.ArgBuffer->length()));
+    return llvm::Error::success();
+  }
+
+  llvm::Error executeCommands(InvocationState &IS) {
+    MTL::CommandBuffer *CmdBuffer = IS.Queue->commandBuffer();
+
+    /*IS.Semaphore = dispatch_semaphore_create(1);
+    CmdBuffer->addCompletedHandler(^void(MTL::CommandBuffer *Buf) {
+      dispatch_semaphore_signal(IS.Semaphore);
+    });*/
+
+    MTL::ComputeCommandEncoder *CmdEncoder = CmdBuffer->computeCommandEncoder();
+
+    CmdEncoder->setComputePipelineState(IS.PipelineState);
+    for (uint64_t I = 0; I < IS.Buffers.size(); ++I)
+      CmdEncoder->setBuffer(IS.Buffers[I], 0, I);
+    CmdEncoder->setBuffer(IS.ArgBuffer, 0, IS.Buffers.size());
+
+    MTL::Size GridSize = MTL::Size(1, 1, 1);
+    NS::UInteger TGS = IS.PipelineState->maxTotalThreadsPerThreadgroup();
+    MTL::Size GroupSize(TGS, 1, 1);
+
+    CmdEncoder->dispatchThreads(GridSize, GroupSize);
+    CmdEncoder->memoryBarrier(MTL::BarrierScopeBuffers);
+
+    CmdEncoder->endEncoding();
+
+    CmdBuffer->commit();
+    CmdBuffer->waitUntilCompleted();
+
+    // dispatch_semaphore_wait(IS.Semaphore, DISPATCH_TIME_FOREVER);
+    return llvm::Error::success();
+  }
+
+  llvm::Error copyBack(Pipeline &P, InvocationState &IS) {
+    uint32_t HeapIndex = 0; // Start at 1 to skip the argument buffer
+    for (auto &D : P.Sets) {
+      for (auto &R : D.Resources) {
+        switch (R.Access) {
+
+        case DataAccess::ReadWrite:
+          memcpy(R.Data.get(), IS.Buffers[HeapIndex++]->contents(), R.Size);
+          break;
+        case DataAccess::ReadOnly:
+        case DataAccess::Constant:
+          return llvm::createStringError(std::errc::not_supported,
+                                         "MTLDevice only supports ReadWrite.");
+        }
+      }
+    }
+    return llvm::Error::success();
+  }
+
+public:
+  MTLDevice(MTL::Device *D) : Device(D) {
+    Description = Device->name()->utf8String();
+  }
+  const Capabilities &getCapabilities() override {
+    if (Caps.empty())
+      queryCapabilities();
+    return Caps;
+  }
+
+  llvm::StringRef getAPIName() const override { return "Metal"; };
+  GPUAPI getAPI() const override { return GPUAPI::Metal; };
+
+  llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) override {
+    InvocationState IS;
+    IS.Queue = Device->newCommandQueue();
+    if (auto Err = loadShaders(IS, Program))
+      return Err;
+
+    if (auto Err = createBuffers(P, IS))
+      return Err;
+
+    if (auto Err = executeCommands(IS))
+      return Err;
+
+    if (auto Err = copyBack(P, IS))
+      return Err;
+    return llvm::Error::success();
+  }
+
+  virtual ~MTLDevice(){};
+
+private:
+  void queryCapabilities() {}
+};
+
+class MTLContext {
+  MTLContext() = default;
+  ~MTLContext() {}
+  MTLContext(const MTLContext &) = delete;
+
+  llvm::SmallVector<std::shared_ptr<MTLDevice>> Devices;
+
+public:
+  static MTLContext &instance() {
+    static MTLContext Ctx;
+    return Ctx;
+  }
+
+  llvm::Error initialize() {
+    auto DefaultDev =
+        std::make_shared<MTLDevice>(MTL::CreateSystemDefaultDevice());
+    Devices.push_back(DefaultDev);
+    Device::registerDevice(std::static_pointer_cast<Device>(DefaultDev));
+    return llvm::Error::success();
+  }
+};
+
+} // namespace
+
+llvm::Error InitializeMTLDevices() {
+  return MTLContext::instance().initialize();
+}

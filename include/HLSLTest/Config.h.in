@@ -12,3 +12,9 @@
 
 /* Enable Vulkan Support */
 #cmakedefine HLSLTEST_ENABLE_VULKAN
+
+/* Enable Metal Support */
+#cmakedefine HLSLTEST_ENABLE_METAL
+
+/* If building for apple platforms */
+#cmakedefine01 APPLE

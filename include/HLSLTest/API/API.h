@@ -14,7 +14,7 @@
 
 namespace hlsltest {
 
-enum class GPUAPI { Unknown, DirectX, Vulkan };
+enum class GPUAPI { Unknown, DirectX, Vulkan, Metal };
 
 }
 

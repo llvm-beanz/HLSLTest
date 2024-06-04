@@ -38,7 +38,13 @@ if (D3D12_INCLUDE_DIRS)
   set(HLSLTEST_ENABLE_D3D12 On)
 endif ()
 
-if (NOT HLSLTEST_ENABLE_VULKAN AND NOT HLSLTEST_ENABLE_D3D12)
+if (APPLE)
+  set(METAL_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third-party/metal-cpp
+                         ${CMAKE_CURRENT_SOURCE_DIR}/third-party/metal_irconverter_runtime)
+  set(HLSLTEST_ENABLE_METAL On)
+endif ()
+
+if (NOT HLSLTEST_ENABLE_VULKAN AND NOT HLSLTEST_ENABLE_D3D12 AND NOT APPLE)
   message(FATAL_ERROR "No supported runtime API")
 endif ()
 

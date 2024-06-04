@@ -23,6 +23,10 @@ llvm::Error InitializeDXDevices();
 llvm::Error InitializeVXDevices();
 #endif
 
+#ifdef HLSLTEST_ENABLE_METAL
+llvm::Error InitializeMTLDevices();
+#endif
+
 namespace {
 class DeviceContext {
 public:
@@ -63,6 +67,10 @@ llvm::Error Device::initialize() {
 #endif
 #ifdef HLSLTEST_ENABLE_VULKAN
   if (auto Err = InitializeVXDevices())
+    return Err;
+#endif
+#ifdef HLSLTEST_ENABLE_METAL
+  if (auto Err = InitializeMTLDevices())
     return Err;
 #endif
   return llvm::Error::success();
