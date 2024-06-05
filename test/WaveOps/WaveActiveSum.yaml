@@ -2,7 +2,7 @@
 # RUN: %if DirectX %{ %gpu-exec %s %t.dxil | FileCheck %s %}
 # RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -fspv-target-env=vulkan1.1 -Fo %t.spv %S/Inputs/WaveActiveSum.hlsl %}
 # RUN: %if Vulkan %{ %gpu-exec %s %t.spv | FileCheck %s %}
-# XFAIL: Vulkan
+# XFAIL: Vulkan-NV
 
 # RUN: %if Metal %{ dxc -T cs_6_0 -Fo %t.dxil %S/Inputs/WaveActiveSum.hlsl %}
 # RUN: %if Metal %{ metal-shaderconverter %t.dxil -o=%t.metallib %}
