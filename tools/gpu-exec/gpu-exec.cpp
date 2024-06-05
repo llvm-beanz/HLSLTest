@@ -20,12 +20,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include <string>
 
-#if APPLE
-#include <thread>
-#include <dispatch/dispatch.h>
-#include <CoreFoundation/CoreFoundation.h>
-#endif
-
 using namespace llvm;
 using namespace hlsltest;
 
@@ -58,15 +52,10 @@ int main(int ArgC, char **ArgV) {
   InitLLVM X(ArgC, ArgV);
   cl::ParseCommandLineOptions(ArgC, ArgV, "GPU Execution Tool");
 
-#if APPLE
-  std::thread([] { exit(run()); }).detach();
-  CFRunLoopRun();
-#else
   if (run()) {
     errs() << "No device available.";
     return 1;
   }
-#endif
   return 0;
 }
 
