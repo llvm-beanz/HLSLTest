@@ -36,7 +36,7 @@ class MTLDevice : public hlsltest::Device {
   MTL::Device *Device;
 
   struct InvocationState {
-    InvocationState() {}
+    InvocationState() { Pool = NS::AutoreleasePool::alloc()->init(); }
     ~InvocationState() {
       for (auto B : Buffers)
         B->release();
@@ -48,14 +48,17 @@ class MTLDevice : public hlsltest::Device {
         PipelineState->release();
       if (Queue)
         Queue->release();
+
+      Pool->release();
     }
 
+    NS::AutoreleasePool *Pool = nullptr;
     MTL::CommandQueue *Queue = nullptr;
     MTL::Library *Lib = nullptr;
     MTL::Function *Fn = nullptr;
     MTL::ComputePipelineState *PipelineState;
     MTL::Buffer *ArgBuffer;
-    llvm::SmallVector<MTL::Buffer *> Buffers;
+    llvm::SmallVector<MTL::Texture *> Buffers;
     dispatch_semaphore_t Semaphore;
   };
 
@@ -80,14 +83,29 @@ class MTLDevice : public hlsltest::Device {
 
   llvm::Error createUAV(Resource &R, InvocationState &IS,
                         const uint32_t HeapIdx) {
-    MTL::Buffer *NewBuffer =
+
+    MTL::TextureDescriptor *Desc = MTL::TextureDescriptor::alloc()->init();
+    uint64_t Width = R.Size / R.getElementSize();
+    Desc->setWidth(Width);
+    Desc->setHeight(1);
+    Desc->setPixelFormat(MTL::PixelFormatR32Sint);
+    Desc->setTextureType(MTL::TextureType2D);
+    Desc->setStorageMode(MTL::StorageModeManaged);
+    Desc->setUsage(MTL::ResourceUsageSample | MTL::ResourceUsageRead |
+                   MTL::ResourceUsageWrite);
+
+    MTL::Texture *NewTex = Device->newTexture(Desc);
+    NewTex->replaceRegion(MTL::Region(0, 0, 0, Width, 1, 1), 0, R.Data.get(),
+                          R.Size);
+
+    /*MTL::Buffer *NewBuffer =
         Device->newBuffer(R.Size, MTL::ResourceStorageModeManaged);
     memcpy(NewBuffer->contents(), R.Data.get(), R.Size);
-    NewBuffer->didModifyRange(NS::Range::Make(0, R.Size));
-    IS.Buffers.push_back(NewBuffer);
+    NewBuffer->didModifyRange(NS::Range::Make(0, R.Size));*/
+    IS.Buffers.push_back(NewTex);
 
     auto *TablePtr = (IRDescriptorTableEntry *)IS.ArgBuffer->contents();
-    IRDescriptorTableSetBuffer(&TablePtr[0], NewBuffer->gpuAddress(), 0);
+    IRDescriptorTableSetTexture(&TablePtr[HeapIdx], NewTex, 0, 0);
 
     return llvm::Error::success();
   }
@@ -105,9 +123,9 @@ class MTLDevice : public hlsltest::Device {
   }
 
   llvm::Error createBuffers(Pipeline &P, InvocationState &IS) {
-
     size_t TableSize = sizeof(IRDescriptorTableEntry) * P.getDescriptorCount();
-    IS.ArgBuffer = Device->newBuffer(TableSize, MTL::ResourceStorageModeManaged);
+    IS.ArgBuffer =
+        Device->newBuffer(TableSize, MTL::ResourceStorageModeManaged);
 
     uint32_t HeapIndex = 0;
     for (auto &D : P.Sets) {
@@ -143,8 +161,12 @@ class MTLDevice : public hlsltest::Device {
     MTL::ComputeCommandEncoder *CmdEncoder = CmdBuffer->computeCommandEncoder();
 
     CmdEncoder->setComputePipelineState(IS.PipelineState);
-    for (uint64_t I = 0; I < IS.Buffers.size(); ++I)
-      CmdEncoder->setBuffer(IS.Buffers[I], 0, I);
+    for (uint64_t I = 0; I < IS.Buffers.size(); ++I) {
+      // CmdEncoder->setBuffer(IS.Buffers[I], 0, I+1);
+      CmdEncoder->setTexture(IS.Buffers[I], I);
+      CmdEncoder->useResource(IS.Buffers[I],
+                              MTL::ResourceUsageRead | MTL::ResourceUsageWrite);
+    }
     CmdEncoder->setBuffer(IS.ArgBuffer, 0, IS.Buffers.size());
 
     MTL::Size GridSize = MTL::Size(1, 1, 1);
@@ -170,7 +192,9 @@ class MTLDevice : public hlsltest::Device {
         switch (R.Access) {
 
         case DataAccess::ReadWrite:
-          memcpy(R.Data.get(), IS.Buffers[HeapIndex++]->contents(), R.Size);
+          IS.Buffers[HeapIndex++]->getBytes(
+              R.Data.get(), R.Size,
+              MTL::Region(0, 0, 0, R.Size / R.getElementSize(), 1, 1), 0);
           break;
         case DataAccess::ReadOnly:
         case DataAccess::Constant:
