@@ -55,3 +55,5 @@ for device in devices['Devices']:
     config.available_features.add("DirectX")
   if device['API'] == "Vulkan":
     config.available_features.add("Vulkan")
+  if device['API'] == "Metal":
+    config.available_features.add("Metal")
