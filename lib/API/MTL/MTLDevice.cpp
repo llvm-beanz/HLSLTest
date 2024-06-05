@@ -104,8 +104,7 @@ class MTLDevice : public hlsltest::Device {
             MTL::ResourceUsageRead | MTL::ResourceUsageWrite);
 
     MTL::Texture *NewTex = Device->newTexture(Desc);
-    NewTex->replaceRegion(MTL::Region(0, 0, 0, Width, 1, 1), 0, R.Data.get(),
-                          0);
+    NewTex->replaceRegion(MTL::Region(0, 0, Width, 1), 0, R.Data.get(), 0);
 
     IS.Buffers.push_back(NewTex);
 
@@ -161,13 +160,13 @@ class MTLDevice : public hlsltest::Device {
     MTL::ComputeCommandEncoder *CmdEncoder = CmdBuffer->computeCommandEncoder();
 
     CmdEncoder->setComputePipelineState(IS.PipelineState);
-    CmdEncoder->setBuffer(IS.ArgBuffer, 0, IS.Buffers.size());
+    CmdEncoder->setBuffer(IS.ArgBuffer, 0, 2);
     for (uint64_t I = 0; I < IS.Buffers.size(); ++I)
       CmdEncoder->useResource(IS.Buffers[I],
                               MTL::ResourceUsageRead | MTL::ResourceUsageWrite);
 
-    MTL::Size GridSize = MTL::Size(1, 1, 1);
     NS::UInteger TGS = IS.PipelineState->maxTotalThreadsPerThreadgroup();
+    MTL::Size GridSize = MTL::Size(TGS, 1, 1);
     MTL::Size GroupSize(TGS, 1, 1);
 
     CmdEncoder->dispatchThreads(GridSize, GroupSize);
@@ -189,8 +188,8 @@ class MTLDevice : public hlsltest::Device {
 
         case DataAccess::ReadWrite: {
           uint64_t Width = R.Size / R.getElementSize();
-          IS.Buffers[HeapIndex++]->getBytes(
-              R.Data.get(), 0, MTL::Region(0, 0, 0, Width, 1, 1), 0);
+          IS.Buffers[HeapIndex++]->getBytes(R.Data.get(), 0,
+                                            MTL::Region(0, 0, Width, 1), 0);
           break;
         }
         case DataAccess::ReadOnly:
