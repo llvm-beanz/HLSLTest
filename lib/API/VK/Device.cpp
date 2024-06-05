@@ -115,29 +115,37 @@ public:
   }
 
   private:
+    void queryCapabilities() {
+      VkPhysicalDeviceFeatures Features;
+      vkGetPhysicalDeviceFeatures(Device, &Features);
 
-  void queryCapabilities() {
-    VkPhysicalDeviceFeatures Features;
-    vkGetPhysicalDeviceFeatures(Device, &Features);
+      Caps.insert(std::make_pair(
+          "APIMajorVersion",
+          make_capability<uint32_t>("APIMajorVersion",
+                                    VK_API_VERSION_MAJOR(Props.apiVersion))));
+
+      Caps.insert(std::make_pair(
+          "APIMinorVersion",
+          make_capability<uint32_t>("APIMinorVersion",
+                                    VK_API_VERSION_MINOR(Props.apiVersion))));
 
 #define VULKAN_FEATURE_BOOL(Name)                                              \
   Caps.insert(                                                                 \
       std::make_pair(#Name, make_capability<bool>(#Name, Features.Name)));
 #include "VKFeatures.def"
-  }
+    }
 
+    void queryLayers() {
+      assert(Layers.empty() && "Should not be called twice!");
+      uint32_t LayerCount;
+      vkEnumerateInstanceLayerProperties(&LayerCount, nullptr);
 
-  void queryLayers() {
-    assert(Layers.empty() && "Should not be called twice!");
-    uint32_t LayerCount;
-    vkEnumerateInstanceLayerProperties(&LayerCount, nullptr);
+      if (LayerCount == 0)
+        return;
 
-    if (LayerCount == 0)
-      return;
-
-    Layers.insert(Layers.begin(), LayerCount, VkLayerProperties());
-    vkEnumerateInstanceLayerProperties(&LayerCount, Layers.data());
-  }
+      Layers.insert(Layers.begin(), LayerCount, VkLayerProperties());
+      vkEnumerateInstanceLayerProperties(&LayerCount, Layers.data());
+    }
 
   public:
 
