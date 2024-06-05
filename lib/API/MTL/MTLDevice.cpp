@@ -30,6 +30,20 @@ static llvm::Error toError(NS::Error *Err) {
   return llvm::createStringError(EC, ErrMsg);
 }
 
+static MTL::PixelFormat getMTLFormat(DataFormat Format) {
+  switch (Format) {
+  case DataFormat::Int32:
+    return MTL::PixelFormatR32Sint;
+    break;
+  case DataFormat::Float32:
+    return MTL::PixelFormatR32Float;
+    break;
+  default:
+    llvm_unreachable("Unsupported Resource format specified");
+  }
+  return MTL::PixelFormatInvalid;
+}
+
 namespace {
 class MTLDevice : public hlsltest::Device {
   Capabilities Caps;
@@ -59,7 +73,6 @@ class MTLDevice : public hlsltest::Device {
     MTL::ComputePipelineState *PipelineState;
     MTL::Buffer *ArgBuffer;
     llvm::SmallVector<MTL::Texture *> Buffers;
-    dispatch_semaphore_t Semaphore;
   };
 
   llvm::Error loadShaders(InvocationState &IS, llvm::StringRef Program) {
@@ -84,24 +97,16 @@ class MTLDevice : public hlsltest::Device {
   llvm::Error createUAV(Resource &R, InvocationState &IS,
                         const uint32_t HeapIdx) {
 
-    MTL::TextureDescriptor *Desc = MTL::TextureDescriptor::alloc()->init();
     uint64_t Width = R.Size / R.getElementSize();
-    Desc->setWidth(Width);
-    Desc->setHeight(1);
-    Desc->setPixelFormat(MTL::PixelFormatR32Sint);
-    Desc->setTextureType(MTL::TextureType2D);
-    Desc->setStorageMode(MTL::StorageModeManaged);
-    Desc->setUsage(MTL::ResourceUsageSample | MTL::ResourceUsageRead |
-                   MTL::ResourceUsageWrite);
+    MTL::TextureDescriptor *Desc =
+        MTL::TextureDescriptor::textureBufferDescriptor(
+            getMTLFormat(R.Format), Width, MTL::StorageModeManaged,
+            MTL::ResourceUsageRead | MTL::ResourceUsageWrite);
 
     MTL::Texture *NewTex = Device->newTexture(Desc);
     NewTex->replaceRegion(MTL::Region(0, 0, 0, Width, 1, 1), 0, R.Data.get(),
-                          R.Size);
+                          0);
 
-    /*MTL::Buffer *NewBuffer =
-        Device->newBuffer(R.Size, MTL::ResourceStorageModeManaged);
-    memcpy(NewBuffer->contents(), R.Data.get(), R.Size);
-    NewBuffer->didModifyRange(NS::Range::Make(0, R.Size));*/
     IS.Buffers.push_back(NewTex);
 
     auto *TablePtr = (IRDescriptorTableEntry *)IS.ArgBuffer->contents();
@@ -153,21 +158,13 @@ class MTLDevice : public hlsltest::Device {
   llvm::Error executeCommands(InvocationState &IS) {
     MTL::CommandBuffer *CmdBuffer = IS.Queue->commandBuffer();
 
-    /*IS.Semaphore = dispatch_semaphore_create(1);
-    CmdBuffer->addCompletedHandler(^void(MTL::CommandBuffer *Buf) {
-      dispatch_semaphore_signal(IS.Semaphore);
-    });*/
-
     MTL::ComputeCommandEncoder *CmdEncoder = CmdBuffer->computeCommandEncoder();
 
     CmdEncoder->setComputePipelineState(IS.PipelineState);
-    for (uint64_t I = 0; I < IS.Buffers.size(); ++I) {
-      // CmdEncoder->setBuffer(IS.Buffers[I], 0, I+1);
-      CmdEncoder->setTexture(IS.Buffers[I], I);
+    CmdEncoder->setBuffer(IS.ArgBuffer, 0, IS.Buffers.size());
+    for (uint64_t I = 0; I < IS.Buffers.size(); ++I)
       CmdEncoder->useResource(IS.Buffers[I],
                               MTL::ResourceUsageRead | MTL::ResourceUsageWrite);
-    }
-    CmdEncoder->setBuffer(IS.ArgBuffer, 0, IS.Buffers.size());
 
     MTL::Size GridSize = MTL::Size(1, 1, 1);
     NS::UInteger TGS = IS.PipelineState->maxTotalThreadsPerThreadgroup();
@@ -181,7 +178,6 @@ class MTLDevice : public hlsltest::Device {
     CmdBuffer->commit();
     CmdBuffer->waitUntilCompleted();
 
-    // dispatch_semaphore_wait(IS.Semaphore, DISPATCH_TIME_FOREVER);
     return llvm::Error::success();
   }
 
@@ -191,11 +187,12 @@ class MTLDevice : public hlsltest::Device {
       for (auto &R : D.Resources) {
         switch (R.Access) {
 
-        case DataAccess::ReadWrite:
+        case DataAccess::ReadWrite: {
+          uint64_t Width = R.Size / R.getElementSize();
           IS.Buffers[HeapIndex++]->getBytes(
-              R.Data.get(), R.Size,
-              MTL::Region(0, 0, 0, R.Size / R.getElementSize(), 1, 1), 0);
+              R.Data.get(), 0, MTL::Region(0, 0, 0, Width, 1, 1), 0);
           break;
+        }
         case DataAccess::ReadOnly:
         case DataAccess::Constant:
           return llvm::createStringError(std::errc::not_supported,
