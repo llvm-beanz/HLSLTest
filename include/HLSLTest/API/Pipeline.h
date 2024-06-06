@@ -52,23 +52,27 @@ struct Resource {
   DirectXBinding DXBinding;
 
   uint32_t getElementSize() const {
+    return getSingleElementSize() * Channels;
+  }
+
+  uint32_t getSingleElementSize() const {
     switch (Format) {
     case DataFormat::Hex8:
-      return 1 * Channels;
+      return 1;
     case DataFormat::Hex16:
     case DataFormat::UInt16:
     case DataFormat::Int16:
-      return 2 * Channels;
+      return 2;
     case DataFormat::Hex32:
     case DataFormat::UInt32:
     case DataFormat::Int32:
     case DataFormat::Float32:
-      return 4 * Channels;
+      return 4;
     case DataFormat::Hex64:
     case DataFormat::UInt64:
     case DataFormat::Int64:
     case DataFormat::Float64:
-      return 8 * Channels;
+      return 8;
     }
     llvm_unreachable("All cases covered.");
   }

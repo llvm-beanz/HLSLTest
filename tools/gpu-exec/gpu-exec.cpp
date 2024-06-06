@@ -16,8 +16,11 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Regex.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include <string>
 
 using namespace llvm;
@@ -37,9 +40,19 @@ static cl::opt<GPUAPI>
                         clEnumValN(GPUAPI::Vulkan, "vk", "Vulkan"),
                         clEnumValN(GPUAPI::Metal, "mtl", "Metal")));
 
-static cl::opt<bool> Quiet(
-    "quiet",
-    cl::desc("Suppress printing the pipeline as output"));
+static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
+                                           cl::value_desc("filename"),
+                                           cl::init("-"));
+
+static cl::opt<std::string> ImageOutput("r",
+                                        cl::desc("Resource index to output"),
+                                        cl::value_desc("set,resource"),
+                                        cl::init(""));
+
+static cl::opt<bool>
+    Quiet("quiet", cl::desc("Suppress printing the pipeline as output"));
+
+llvm::Error WritePNG(llvm::StringRef, const Resource &);
 
 std::unique_ptr<MemoryBuffer> readFile(const std::string &Path) {
   ExitOnError ExitOnErr("gpu-exec: error: ");
@@ -102,8 +115,41 @@ int run() {
 
     if (Quiet)
       return 0;
-    yaml::Output YOut(outs());
-    YOut << PipelineDesc;
+
+    std::error_code EC;
+    llvm::sys::fs::OpenFlags OpenFlags = llvm::sys::fs::OF_None;
+    if (ImageOutput.empty()) {
+      OpenFlags |= llvm::sys::fs::OF_Text;
+      auto Out =
+          std::make_unique<llvm::ToolOutputFile>(OutputFilename, EC, OpenFlags);
+      ExitOnErr(llvm::errorCodeToError(EC));
+
+      yaml::Output YOut(Out->os());
+      YOut << PipelineDesc;
+      Out->keep();
+      return 0;
+    }
+    llvm::Regex R("^([0-9]+),([0-9]+)$");
+    llvm::SmallVector<llvm::StringRef, 2> Matches;
+    if (!R.match(ImageOutput, &Matches))
+      ExitOnErr(
+          createStringError(std::errc::invalid_argument,
+                            "Image output argument must be specified as "
+                            "<set>,<resource> (e.g. \"0,1\", \"3,0\", etc)"));
+    uint64_t Set = 0, Resource = 0;
+    if (!to_integer(Matches[1], Set) || !to_integer(Matches[2], Resource))
+      ExitOnErr(
+          createStringError(std::errc::invalid_argument,
+                            "Image output argument must be specified as "
+                            "<set>,<resource> (e.g. \"0,1\", \"3,0\", etc)"));
+    if (Set >= PipelineDesc.Sets.size())
+      ExitOnErr(createStringError(std::errc::invalid_argument,
+                                  "Specified descriptor set out of range"));
+    if (Resource >= PipelineDesc.Sets[Set].Resources.size())
+      ExitOnErr(createStringError(std::errc::invalid_argument,
+                                  "Specified descriptor index out of range"));
+    ExitOnErr(
+        WritePNG(OutputFilename, PipelineDesc.Sets[Set].Resources[Resource]));
     return 0;
   }
   return 1;

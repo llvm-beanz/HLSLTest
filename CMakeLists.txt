@@ -59,6 +59,7 @@ if (D3D12_INCLUDE_DIRS AND NOT DIRECTX_HEADERS_PATH)
                       SOURCE_DIR ${DIRECTX_HEADERS_PATH})
 endif ()
 
+add_subdirectory(third-party/libpng)
 add_subdirectory(lib)
 add_subdirectory(tools)
 
