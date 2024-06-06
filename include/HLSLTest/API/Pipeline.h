@@ -78,6 +78,7 @@ struct DescriptorSet {
 };
 
 struct Pipeline {
+  int DispatchSize[3];
   llvm::SmallVector<DescriptorSet> Sets;
 
   uint32_t getDescriptorCount() const {

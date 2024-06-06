@@ -16,6 +16,8 @@ using namespace hlsltest;
 namespace llvm {
 namespace yaml {
 void MappingTraits<hlsltest::Pipeline>::mapping(IO &I, hlsltest::Pipeline &P) {
+  MutableArrayRef<int> MutableDispatchSize(P.DispatchSize);
+  I.mapRequired("DispatchSize", MutableDispatchSize);
   I.mapRequired("DescriptorSets", P.Sets);
 }
 
@@ -35,6 +37,14 @@ void MappingTraits<hlsltest::Resource>::mapping(IO &I, hlsltest::Resource &R) {
                                       R.Size / sizeof(Type));                  \
       I.mapRequired("Data", Arr);                                              \
     } else {                                                                   \
+      int64_t ZeroInitSize;                                                    \
+      I.mapOptional("ZeroInitSize", ZeroInitSize, 0);                          \
+      if (ZeroInitSize > 0) {                                                  \
+        R.Size = ZeroInitSize;                                                 \
+        R.Data.reset(new char[R.Size]);                                        \
+        memset(R.Data.get(), 0, R.Size);                                       \
+        break;                                                                 \
+      }                                                                        \
       llvm::SmallVector<Type, 64> Arr;                                         \
       I.mapRequired("Data", Arr);                                              \
       R.Size = Arr.size() * sizeof(Type);                                      \
