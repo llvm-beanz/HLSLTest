@@ -39,14 +39,22 @@ using namespace hlsltest;
 template <> char CapabilityValueEnum<directx::ShaderModel>::ID = 0;
 template <> char CapabilityValueEnum<directx::RootSignature>::ID = 0;
 
-static DXGI_FORMAT getDXFormat(DataFormat Format) {
+#define DXFormats(FMT)                                                         \
+  if (Channels == 1)                                                           \
+    return DXGI_FORMAT_R32_##FMT;                                              \
+  if (Channels == 2)                                                           \
+    return DXGI_FORMAT_R32G32_##FMT;                                           \
+  if (Channels == 3)                                                           \
+    return DXGI_FORMAT_R32G32B32_##FMT;                                        \
+  if (Channels == 4)                                                           \
+    return DXGI_FORMAT_R32G32B32A32_##FMT;
+
+static DXGI_FORMAT getDXFormat(DataFormat Format, int Channels) {
   switch (Format) {
   case DataFormat::Int32:
-    return DXGI_FORMAT_R32_SINT;
-    break;
+    DXFormats(SINT) break;
   case DataFormat::Float32:
-    return DXGI_FORMAT_R32_FLOAT;
-    break;
+    DXFormats(FLOAT) break;
   default:
     llvm_unreachable("Unsupported Resource format specified");
   }
@@ -364,7 +372,7 @@ public:
 
     const uint32_t EltSize = R.getElementSize();
     const uint32_t NumElts = R.Size / EltSize;
-    DXGI_FORMAT EltFormat = getDXFormat(R.Format);
+    DXGI_FORMAT EltFormat = getDXFormat(R.Format, R.Channels);
     const D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {
         EltFormat,
         D3D12_UAV_DIMENSION_BUFFER,
@@ -519,7 +527,8 @@ public:
       // TODO: This probably computes the wrong offsets if I have multiple
       // descriptor tables in use.
     }
-    IS.CmdList->Dispatch(1, 1, 1);
+    IS.CmdList->Dispatch(P.DispatchSize[0], P.DispatchSize[1],
+                         P.DispatchSize[2]);
 
     for (auto &Out : IS.Outputs) {
       addReadbackBeginBarrier(IS, Out.second.Buffer);
