@@ -29,7 +29,7 @@ enum class DataFormat {
   Int32,
   Int64,
   Float32,
-  Float64
+  Float64,
 };
 
 enum class DataAccess {
@@ -45,6 +45,7 @@ struct DirectXBinding {
 
 struct Resource {
   DataFormat Format;
+  int Channels;
   DataAccess Access;
   size_t Size;
   std::unique_ptr<char[]> Data;
@@ -53,21 +54,21 @@ struct Resource {
   uint32_t getElementSize() const {
     switch (Format) {
     case DataFormat::Hex8:
-      return 1;
+      return 1 * Channels;
     case DataFormat::Hex16:
     case DataFormat::UInt16:
     case DataFormat::Int16:
-      return 2;
+      return 2 * Channels;
     case DataFormat::Hex32:
     case DataFormat::UInt32:
     case DataFormat::Int32:
     case DataFormat::Float32:
-      return 4;
+      return 4 * Channels;
     case DataFormat::Hex64:
     case DataFormat::UInt64:
     case DataFormat::Int64:
     case DataFormat::Float64:
-      return 8;
+      return 8 * Channels;
     }
     llvm_unreachable("All cases covered.");
   }

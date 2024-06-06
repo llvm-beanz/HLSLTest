@@ -30,13 +30,21 @@ static llvm::Error toError(NS::Error *Err) {
   return llvm::createStringError(EC, ErrMsg);
 }
 
-static MTL::PixelFormat getMTLFormat(DataFormat Format) {
+#define MTLFormats(FMT)                                                        \
+  if (Channels == 1)                                                           \
+    return MTL::PixelFormatR##FMT;                                             \
+  if (Channels == 2)                                                           \
+    return MTL::PixelFormatRG##FMT;                                            \
+  if (Channels == 4)                                                           \
+    return MTL::PixelFormatRGBA##FMT;
+
+static MTL::PixelFormat getMTLFormat(DataFormat Format, int Channels) {
   switch (Format) {
   case DataFormat::Int32:
-    return MTL::PixelFormatR32Sint;
+    MTLFormats(32Sint)
     break;
   case DataFormat::Float32:
-    return MTL::PixelFormatR32Float;
+    MTLFormats(32Float)
     break;
   default:
     llvm_unreachable("Unsupported Resource format specified");
@@ -100,7 +108,7 @@ class MTLDevice : public hlsltest::Device {
     uint64_t Width = R.Size / R.getElementSize();
     MTL::TextureDescriptor *Desc =
         MTL::TextureDescriptor::textureBufferDescriptor(
-            getMTLFormat(R.Format), Width, MTL::StorageModeManaged,
+            getMTLFormat(R.Format, R.Channels), Width, MTL::StorageModeManaged,
             MTL::ResourceUsageRead | MTL::ResourceUsageWrite);
 
     MTL::Texture *NewTex = Device->newTexture(Desc);
@@ -154,7 +162,7 @@ class MTLDevice : public hlsltest::Device {
     return llvm::Error::success();
   }
 
-  llvm::Error executeCommands(InvocationState &IS) {
+  llvm::Error executeCommands(Pipeline &P, InvocationState &IS) {
     MTL::CommandBuffer *CmdBuffer = IS.Queue->commandBuffer();
 
     MTL::ComputeCommandEncoder *CmdEncoder = CmdBuffer->computeCommandEncoder();
@@ -166,7 +174,8 @@ class MTLDevice : public hlsltest::Device {
                               MTL::ResourceUsageRead | MTL::ResourceUsageWrite);
 
     NS::UInteger TGS = IS.PipelineState->maxTotalThreadsPerThreadgroup();
-    MTL::Size GridSize = MTL::Size(TGS, 1, 1);
+    MTL::Size GridSize = MTL::Size(TGS * P.DispatchSize[0], P.DispatchSize[1],
+                                   P.DispatchSize[2]);
     MTL::Size GroupSize(TGS, 1, 1);
 
     CmdEncoder->dispatchThreads(GridSize, GroupSize);
@@ -224,7 +233,7 @@ public:
     if (auto Err = createBuffers(P, IS))
       return Err;
 
-    if (auto Err = executeCommands(IS))
+    if (auto Err = executeCommands(P, IS))
       return Err;
 
     if (auto Err = copyBack(P, IS))

@@ -37,6 +37,10 @@ static cl::opt<GPUAPI>
                         clEnumValN(GPUAPI::Vulkan, "vk", "Vulkan"),
                         clEnumValN(GPUAPI::Metal, "mtl", "Metal")));
 
+static cl::opt<bool> Quiet(
+    "quiet",
+    cl::desc("Suppress printing the pipeline as output"));
+
 std::unique_ptr<MemoryBuffer> readFile(const std::string &Path) {
   ExitOnError ExitOnErr("gpu-exec: error: ");
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
@@ -96,6 +100,8 @@ int run() {
       continue;
     ExitOnErr(D->executeProgram(ShaderBuf->getBuffer(), PipelineDesc));
 
+    if (Quiet)
+      return 0;
     yaml::Output YOut(outs());
     YOut << PipelineDesc;
     return 0;
