@@ -17,6 +17,13 @@ Add the following to the CMake options:
 -DLLVM_EXTERNAL_HLSLTEST_SOURCE_DIR=${workspaceRoot}\..\HLSLTest -DLLVM_EXTERNAL_PROJECTS="HLSLTest"
 ```
 
+If you do not have a build of dxc on your path you'll need to specify the shader
+compiler to use by passing:
+
+```shell
+-DHLSLTEST_COMPILER=<path to compiler>
+```
+
 # YAML Pipeline Format
 
 This framework provides a YAML representation for describing GPU pipelines and buffers. The format is implemented by the `API/Pipeline.{h|cpp}` sources. The following is an example pipleine YAML description:
