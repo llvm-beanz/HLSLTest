@@ -59,6 +59,22 @@ if (D3D12_INCLUDE_DIRS AND NOT DIRECTX_HEADERS_PATH)
                       SOURCE_DIR ${DIRECTX_HEADERS_PATH})
 endif ()
 
+if (WIN32)
+  message(STATUS "Including vendored zlib")
+  add_subdirectory(third-party/zlib)
+  # These are some extra fun hacks becauze ZLIB's CMake is fragile
+  if (NOT TARGET ZLIB::ZLIB)
+    add_library(ZLIB::ZLIB ALIAS zlibstatic)
+  endif ()
+  # libpng does some crazy stuff with zlib's include directories.
+  set(ZLIB_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third-party/zlib
+                        ${CMAKE_CURRENT_BINARY_DIR}/third-party/zlib CACHE STRING "" FORCE)
+  set(ZLIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third-party/zlib
+                        ${CMAKE_CURRENT_BINARY_DIR}/third-party/zlib CACHE STRING "" FORCE)
+  include_directories(${ZLIB_INCLIDE_DIR})
+  # Skip exports for libpng because they don't work with building my own zlib.
+  set(SKIP_INSTALL_EXPORT On)
+endif ()
 add_subdirectory(third-party/libpng)
 add_subdirectory(lib)
 add_subdirectory(tools)
