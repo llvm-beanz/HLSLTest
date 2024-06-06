@@ -53,9 +53,10 @@ devices = yaml.safe_load(query_string)
 for device in devices['Devices']:
   if device['API'] == "DirectX":
     config.available_features.add("DirectX")
-  if device['API'] == "Vulkan":
+  if device['API'] == "Metal":
+    config.available_features.add("Metal")
+  # Only include vulkan features if the compiler supports SPIR-V
+  if device['API'] == "Vulkan" and config.hlsltest_supports_spirv:
     config.available_features.add("Vulkan")
     if "NVIDIA" in device['Description']:
       config.available_features.add("Vulkan-NV")
-  if device['API'] == "Metal":
-    config.available_features.add("Metal")
