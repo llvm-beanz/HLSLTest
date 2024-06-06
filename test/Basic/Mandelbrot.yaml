@@ -1,0 +1,23 @@
+# REQUIRES: imagediff
+# this test doesn't yet do anything... so we should skip it.
+
+# RUN: %if DirectX %{ dxc -T cs_6_0 -Fo %t.dxil %S/Inputs/Mandelbrot.hlsl %}
+# RUN: %if DirectX %{ %gpu-exec %s %t.dxil | FileCheck %s %}
+# RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -Fo %t.spv %S/Inputs/Mandelbrot.hlsl %}
+# RUN: %if Vulkan %{ %gpu-exec %s %t.spv | FileCheck %s %}
+# RUN: %if Metal %{ dxc -T cs_6_0 -Fo %t.dxil %S/Inputs/Mandelbrot.hlsl %}
+# RUN: %if Metal %{ metal-shaderconverter %t.dxil -o=%t.metallib %}
+# RUN: %if Metal %{ %gpu-exec %s %t.metallib | FileCheck %s %}
+
+---
+DispatchSize: [1024, 1024, 1]
+DescriptorSets:
+  - Resources:
+    - Access: ReadWrite
+      Format: Float32
+      Channels: 4
+      ZeroInitSize: 16777216 # 1024 * 1024 * 4 channels / pixel * 4 bytes / channel
+      DirectXBinding:
+        Register: 0
+        Space: 0
+...
