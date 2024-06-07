@@ -10,13 +10,13 @@
 # RUN: %if Metal %{ %gpu-exec %s %t.metallib | FileCheck %s %}
 
 ---
-DispatchSize: [1024, 1, 1]
+DispatchSize: [16384, 1, 1]
 DescriptorSets:
   - Resources:
     - Access: ReadWrite
       Format: Float32
       Channels: 4
-      ZeroInitSize: 16777216 # 1024 * 1024 * 4 channels / pixel * 4 bytes / channel
+      ZeroInitSize: 268435456 # 1024 * 1024 * 4 channels / pixel * 4 bytes / channel
       DirectXBinding:
         Register: 0
         Space: 0

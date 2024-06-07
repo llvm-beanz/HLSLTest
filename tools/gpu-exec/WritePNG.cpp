@@ -21,8 +21,8 @@ using namespace hlsltest;
 
 llvm::Error WritePNG(llvm::StringRef OutputPath, const Resource &R) {
   // TODO: Fixme
-  int Height = 1024;
-  int Width = 1024;
+  int Height = 4096;
+  int Width = 4096;
   // Translate pixel data into uint8_t.
   uint64_t Stride = R.getSingleElementSize();
   uint64_t PixelComponents = R.Size / Stride;
