@@ -5,33 +5,33 @@ const static float3 Palette[8] = {float3(0.0, 0.0, 0.0), float3(0.5, 0.5, 0.5),
                                   float3(0.5, 0.5, 1.0), float3(0.5, 1.0, 1.0),
                                   float3(1.0, 0.5, 1.0), float3(1.0, 1.0, 0.5)};
 
-[numthreads(32, 32, 1)] void main(uint3 index
-                                  : SV_DispatchThreadID) {
-  uint2 dispatchSize = 1024.xx;
-  float x0 = 2.0 * index.x / dispatchSize.x - 1.5;
-  float y0 = 2.0 * index.y / dispatchSize.y - 1.0;
+[numthreads(1024, 1, 1)] void main(uint3 DID : SV_DispatchThreadID) {
+  uint2 Index = uint2(DID.x%1024, DID.x/1024);
+  uint2 DispatchSize = 1024.xx;
+  float X0 = 2.0 * (float)Index.x / (float)DispatchSize.x - 1.5;
+  float Y0 = 2.0 * (float)Index.y / (float)DispatchSize.y - 1.0;
 
   // Implement Mandelbrot set
-  float x = x0;
-  float y = y0;
-  uint iteration = 0;
-  uint max_iteration = 200;
-  float xtmp = 0.0;
-  bool diverged = false;
-  for (; iteration < max_iteration; ++iteration) {
-    if (x * x + y * y > 2000 * 2000) {
-      diverged = true;
+  float X = X0;
+  float Y = Y0;
+  uint Iteration = 0;
+  uint MaxIteration = 2000;
+  float XTmp = 0.0;
+  bool Diverged = false;
+  for (; Iteration < MaxIteration; ++Iteration) {
+    if (X * X + Y * Y > 2000 * 2000) {
+      Diverged = true;
       break;
     }
-    xtmp = x * x - y * y + x0;
-    y = 2 * x * y + y0;
-    x = xtmp;
+    XTmp = X * X - Y * Y + X0;
+    Y = 2 * X * Y + Y0;
+    X = XTmp;
   }
 
   float3 Color = float3(0, 0, 0);
-  if (diverged) {
+  if (Diverged) {
     float Gradient = 1.0;
-    float Smooth = log2(log2(x * x + y * y) / 2.0);
+    float Smooth = log2(log2(X * X + Y * Y) / 2.0);
     float ColorIdx = sqrt((float)+10.0 - Smooth) * Gradient;
     float LerpSize = frac(ColorIdx);
     LerpSize = LerpSize * LerpSize * (3.0 - 2.0 * LerpSize);
@@ -40,5 +40,5 @@ const static float3 Palette[8] = {float3(0.0, 0.0, 0.0), float3(0.5, 0.5, 0.5),
     Color = lerp(Palette[ColorIdx1], Palette[ColorIdx2], LerpSize.xxx);
   }
 
-  Tex[(index.y * 1024) + index.x] = float4(Color, 1.0);
+  Tex[DID.x] = float4(Color, 1.0);
 }
