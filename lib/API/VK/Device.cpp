@@ -18,14 +18,22 @@
 
 using namespace hlsltest;
 
-static VkFormat getVKFormat(DataFormat Format) {
+#define VKFormats(FMT)                                                         \
+  if (Channels == 1)                                                           \
+    return VK_FORMAT_R32_##FMT;                                                \
+  if (Channels == 2)                                                           \
+    return VK_FORMAT_R32G32_##FMT;                                             \
+  if (Channels == 3)                                                           \
+    return VK_FORMAT_R32G32B32_##FMT;                                          \
+  if (Channels == 4)                                                           \
+    return VK_FORMAT_R32G32B32A32_##FMT;
+
+static VkFormat getVKFormat(DataFormat Format, int Channels) {
   switch (Format) {
   case DataFormat::Int32:
-    return VK_FORMAT_R32_SINT;
-    break;
+    VKFormats(SINT) break;
   case DataFormat::Float32:
-    return VK_FORMAT_R32_SFLOAT;
-    break;
+    VKFormats(SFLOAT) break;
   default:
     llvm_unreachable("Unsupported Resource format specified");
   }
@@ -49,6 +57,7 @@ private:
   struct UAVRef {
     BufferRef Host;
     BufferRef Device;
+    uint64_t Size;
   };
 
   struct InvocationState {
@@ -114,41 +123,40 @@ public:
     }
   }
 
-  private:
-    void queryCapabilities() {
-      VkPhysicalDeviceFeatures Features;
-      vkGetPhysicalDeviceFeatures(Device, &Features);
+private:
+  void queryCapabilities() {
+    VkPhysicalDeviceFeatures Features;
+    vkGetPhysicalDeviceFeatures(Device, &Features);
 
-      Caps.insert(std::make_pair(
-          "APIMajorVersion",
-          make_capability<uint32_t>("APIMajorVersion",
-                                    VK_API_VERSION_MAJOR(Props.apiVersion))));
+    Caps.insert(std::make_pair(
+        "APIMajorVersion",
+        make_capability<uint32_t>("APIMajorVersion",
+                                  VK_API_VERSION_MAJOR(Props.apiVersion))));
 
-      Caps.insert(std::make_pair(
-          "APIMinorVersion",
-          make_capability<uint32_t>("APIMinorVersion",
-                                    VK_API_VERSION_MINOR(Props.apiVersion))));
+    Caps.insert(std::make_pair(
+        "APIMinorVersion",
+        make_capability<uint32_t>("APIMinorVersion",
+                                  VK_API_VERSION_MINOR(Props.apiVersion))));
 
 #define VULKAN_FEATURE_BOOL(Name)                                              \
   Caps.insert(                                                                 \
       std::make_pair(#Name, make_capability<bool>(#Name, Features.Name)));
 #include "VKFeatures.def"
-    }
+  }
 
-    void queryLayers() {
-      assert(Layers.empty() && "Should not be called twice!");
-      uint32_t LayerCount;
-      vkEnumerateInstanceLayerProperties(&LayerCount, nullptr);
+  void queryLayers() {
+    assert(Layers.empty() && "Should not be called twice!");
+    uint32_t LayerCount;
+    vkEnumerateInstanceLayerProperties(&LayerCount, nullptr);
 
-      if (LayerCount == 0)
-        return;
+    if (LayerCount == 0)
+      return;
 
-      Layers.insert(Layers.begin(), LayerCount, VkLayerProperties());
-      vkEnumerateInstanceLayerProperties(&LayerCount, Layers.data());
-    }
+    Layers.insert(Layers.begin(), LayerCount, VkLayerProperties());
+    vkEnumerateInstanceLayerProperties(&LayerCount, Layers.data());
+  }
 
-  public:
-
+public:
   llvm::Error createDevice(InvocationState &IS) {
 
     // Find a queue that supports compute
@@ -299,7 +307,7 @@ public:
     vkCmdCopyBuffer(IS.CmdBuffer, ExHostBuf->Buffer, ExDeviceBuf->Buffer, 1,
                     &Copy);
 
-    IS.UAVs.push_back(UAVRef{*ExHostBuf, *ExDeviceBuf});
+    IS.UAVs.push_back(UAVRef{*ExHostBuf, *ExDeviceBuf, R.Size});
 
     return llvm::Error::success();
   }
@@ -434,14 +442,16 @@ public:
                                      "Failed to allocate descriptor sets.");
     llvm::SmallVector<VkWriteDescriptorSet> WriteDescriptors;
     assert(IS.BufferViews.empty());
-    IS.BufferViews.insert(IS.BufferViews.begin(), P.getDescriptorCount(), VkBufferView());
+    IS.BufferViews.insert(IS.BufferViews.begin(), P.getDescriptorCount(),
+                          VkBufferView());
     uint32_t UAVIdx = 0;
     for (uint32_t SetIdx = 0; SetIdx < P.Sets.size(); ++SetIdx) {
       for (uint32_t RIdx = 0; RIdx < P.Sets[SetIdx].Resources.size();
            ++RIdx, ++UAVIdx) {
         // This is a hack... need a better way to do this.
         VkBufferViewCreateInfo ViewCreateInfo = {};
-        VkFormat Format = getVKFormat(P.Sets[SetIdx].Resources[RIdx].Format);
+        VkFormat Format = getVKFormat(P.Sets[SetIdx].Resources[RIdx].Format,
+                                      P.Sets[SetIdx].Resources[RIdx].Channels);
         ViewCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
         ViewCreateInfo.buffer = IS.UAVs[UAVIdx].Device.Buffer;
         ViewCreateInfo.format = Format;
@@ -505,7 +515,7 @@ public:
     return llvm::Error::success();
   }
 
-  llvm::Error createComputeCommands(InvocationState &IS) {
+  llvm::Error createComputeCommands(Pipeline &P, InvocationState &IS) {
     for (auto &UAV : IS.UAVs) {
       VkBufferMemoryBarrier Barrier = {};
       Barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -525,7 +535,8 @@ public:
     vkCmdBindDescriptorSets(IS.CmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                             IS.PipelineLayout, 0, IS.DescriptorSets.size(),
                             IS.DescriptorSets.data(), 0, 0);
-    vkCmdDispatch(IS.CmdBuffer, 1, 1, 1);
+    vkCmdDispatch(IS.CmdBuffer, P.DispatchSize[0], P.DispatchSize[1],
+                  P.DispatchSize[2]);
 
     for (auto &UAV : IS.UAVs) {
       VkBufferMemoryBarrier Barrier = {};
@@ -541,7 +552,7 @@ public:
                            VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1,
                            &Barrier, 0, nullptr);
       VkBufferCopy CopyRegion = {};
-      CopyRegion.size = 32; // TODO: Fix me
+      CopyRegion.size = UAV.Size;
       vkCmdCopyBuffer(IS.CmdBuffer, UAV.Device.Buffer, UAV.Host.Buffer, 1,
                       &CopyRegion);
 
@@ -585,7 +596,7 @@ public:
     vkQueueWaitIdle(IS.Queue);
     for (auto &V : IS.BufferViews)
       vkDestroyBufferView(IS.Device, V, nullptr);
-    
+
     for (auto &R : IS.UAVs) {
       vkDestroyBuffer(IS.Device, R.Device.Buffer, nullptr);
       vkFreeMemory(IS.Device, R.Device.Memory, nullptr);
@@ -637,7 +648,7 @@ public:
     if (auto Err = createPipeline(P, State))
       return Err;
     llvm::outs() << "Compute pipeline created.\n";
-    if (auto Err = createComputeCommands(State))
+    if (auto Err = createComputeCommands(P, State))
       return Err;
     llvm::outs() << "Compute commands created.\n";
     if (auto Err = executeCommandBuffer(State, VK_PIPELINE_STAGE_TRANSFER_BIT))
@@ -678,13 +689,13 @@ public:
     VkInstanceCreateInfo CreateInfo = {};
     CreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     CreateInfo.pApplicationInfo = &AppInfo;
-    
-    // TODO: This is a bit hacky but matches what I did in DX.
-    #ifndef NDEBUG
+
+// TODO: This is a bit hacky but matches what I did in DX.
+#ifndef NDEBUG
     const char *ValidationLayer = "VK_LAYER_KHRONOS_validation";
     CreateInfo.ppEnabledLayerNames = &ValidationLayer;
     CreateInfo.enabledLayerCount = 1;
-    #endif
+#endif
 
     VkResult Res = vkCreateInstance(&CreateInfo, NULL, &Instance);
     if (Res == VK_ERROR_INCOMPATIBLE_DRIVER)
