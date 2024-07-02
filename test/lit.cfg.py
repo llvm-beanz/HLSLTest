@@ -53,6 +53,8 @@ devices = yaml.safe_load(query_string)
 for device in devices['Devices']:
   if device['API'] == "DirectX":
     config.available_features.add("DirectX")
+    if "Intel" in device['Description']:
+      config.available_features.add("DirectX-Intel")
   if device['API'] == "Metal":
     config.available_features.add("Metal")
   # Only include vulkan features if the compiler supports SPIR-V
