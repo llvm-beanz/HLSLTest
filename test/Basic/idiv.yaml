@@ -6,6 +6,8 @@
 # RUN: %if Metal %{ metal-shaderconverter %t.dxil -o=%t.metallib %}
 # RUN: %if Metal %{ %gpu-exec %s %t.metallib | FileCheck %s %}
 
+# XFAIL: Metal
+# On Metal 0/0 = 0, but other platforms n/0 = -1
 ---
 DispatchSize: [1, 1, 1]
 DescriptorSets:
