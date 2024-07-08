@@ -634,14 +634,16 @@ public:
                                "Failed to create DXGI Factory")) {
       return Err;
     }
-    for (unsigned AdapterIndex = 0;; ++AdapterIndex) {
+    for (unsigned AdapterIndex = 0;;) {
       CComPtr<IDXGIAdapter1> Adapter;
 
-      if (auto Err = HR::toError(
-              Factory->EnumAdapters1(AdapterIndex++, &Adapter), "")) {
-        llvm::consumeError(std::move(Err));
+      HRESULT HR = Factory->EnumAdapters1(AdapterIndex++, &Adapter);
+
+      if (DXGI_ERROR_NOT_FOUND == HR)
         return llvm::Error::success();
-      }
+
+      if (auto Err = HR::toError(HR, ""))
+        return Err;
       auto ExDevice = DXDevice::Create(Adapter);
       if (!ExDevice)
         return ExDevice.takeError();

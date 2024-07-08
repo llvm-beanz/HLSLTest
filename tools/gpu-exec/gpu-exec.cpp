@@ -52,6 +52,9 @@ static cl::opt<std::string> ImageOutput("r",
 static cl::opt<bool>
     Quiet("quiet", cl::desc("Suppress printing the pipeline as output"));
 
+static cl::opt<bool>
+    UseWarp("warp", cl::desc("Use warp"));
+
 llvm::Error WritePNG(llvm::StringRef, const Resource &);
 
 std::unique_ptr<MemoryBuffer> readFile(const std::string &Path) {
@@ -97,6 +100,11 @@ int run() {
     }
   }
 
+  if (UseWarp && APIToUse != GPUAPI::DirectX)
+    ExitOnErr(
+        createStringError(std::errc::executable_format_error,
+                          "WARP required DirectX API"));
+
   if (APIToUse == GPUAPI::Unknown)
     ExitOnErr(
         createStringError(std::errc::executable_format_error,
@@ -110,6 +118,8 @@ int run() {
 
   for (const auto &D : Device::devices()) {
     if (D->getAPI() != APIToUse)
+      continue;
+    if (UseWarp && D->getDescription() != "Microsoft Basic Render Driver")
       continue;
     ExitOnErr(D->executeProgram(ShaderBuf->getBuffer(), PipelineDesc));
 

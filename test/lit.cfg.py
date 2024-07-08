@@ -55,6 +55,8 @@ for device in devices['Devices']:
     config.available_features.add("DirectX")
     if "Intel" in device['Description']:
       config.available_features.add("DirectX-Intel")
+    if "Microsoft Basic Render Driver" == device['Description']:
+      config.available_features.add("DirectX-WARP")
   if device['API'] == "Metal":
     config.available_features.add("Metal")
   # Only include vulkan features if the compiler supports SPIR-V

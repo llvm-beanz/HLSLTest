@@ -1,0 +1,40 @@
+# RUN: dxc -T cs_6_0 -Fo %t.dxil %S/Inputs/idiv.hlsl
+# RUN: %gpu-exec %s %t.dxil -warp | FileCheck %s
+
+# REQUIRES: DirectX-WARP
+# The behavior of division by zero and edge cases for division by negative one
+# is undefined in HLSL with SM 6.0. WARP's behavior is different from other
+# drivers so it is captured separately in this test.
+
+---
+DispatchSize: [1, 1, 1]
+DescriptorSets:
+  - Resources:
+    - Access: ReadWrite
+      Format: Int32
+      Data: [ 1, -1, 2147483647, -2147483648, 0]
+      DirectXBinding:
+        Register: 0
+        Space: 0
+    - Access: ReadWrite
+      Format: Int32
+      Data: [ 0, 0, 0, 0, 0]
+      DirectXBinding:
+        Register: 1
+        Space: 0
+    - Access: ReadWrite
+      Format: Int32
+      Data: [ -1, -1, -1, -1, -1]
+      DirectXBinding:
+        Register: 2
+        Space: 0
+...
+
+# CHECK: Access: ReadWrite
+# CHECK: Access: ReadWrite
+# CHECK-NEXT: Format: Int32
+# CHECK-NEXT: Data: [ 2147483647, 2147483647, 2147483647, 2147483647,
+# CHECK-NEXT: 2147483647 ]
+# CHECK: Access: ReadWrite
+# CHECK-NEXT: Format: Int32
+# CHECK-NEXT: Data: [ -1, 1, -2147483647, 2147483647, 0 ]
