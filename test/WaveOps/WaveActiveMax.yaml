@@ -47,13 +47,11 @@ DescriptorSets:
 # VULKAN-NEXT: Data:            [ nan, nan, nan, nan ]
 # CHECK: Access:          ReadWrite
 # CHECK-NEXT: Format:          Float32
-# METAL-NEXT: Data:            [ inf, inf, inf, inf ]
-# VULKAN-NEXT: Data:            [ inf, inf, inf, inf ]
+# CHECK-NEXT: Data:            [ inf, inf, inf, inf ]
 # CHECK: Access:          ReadWrite
 # CHECK-NEXT: Format:          Float32
 # METAL-NEXT: Data:            [ 0, 0, 0, 0 ]
 # VULKAN-NEXT: Data:            [ -inf, -inf, -inf, -inf ]
 # CHECK: Access:          ReadWrite
 # CHECK-NEXT: Format:          Float32
-# METAL-NEXT: Data:            [ inf, inf, inf, inf ]
-# VULKAN-NEXT: Data:            [ inf, inf, inf, inf ]
+# CHECK-NEXT: Data:            [ inf, inf, inf, inf ]
