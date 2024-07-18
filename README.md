@@ -36,7 +36,7 @@ DescriptorSets:
       Format: Int32
       Data: [ 1, 2, 3, 4, 5, 6, 7, 8]
       DirectXBinding:
-        Register: 0 # implies b0 due to Access being RW
+        Register: 0 # implies b0 due to Access being Constant
         Space: 0
     - Access: ReadOnly
       Format: Float32
