@@ -40,7 +40,6 @@ DescriptorSets:
 # RUN: %if Metal %{ dxc -T cs_6_0 -Fo %t.dxil %t/simple.hlsl %}
 # RUN: %if Metal %{ metal-shaderconverter %t.dxil -o=%t.metallib %}
 # RUN: %if Metal %{ %gpu-exec %t/simple.yaml %t.metallib | FileCheck %s %}
-# XFAIL: Metal
 
 
 # CHECK: Data:
