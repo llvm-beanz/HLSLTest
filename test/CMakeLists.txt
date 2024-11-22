@@ -65,6 +65,8 @@ try_compile_hlsl(SUPPORTS_SPIRV SOURCE
                 FLAGS -T cs_6_0 -spirv
 )
 
+llvm_canonicalize_cmake_booleans(HLSLTEST_TEST_CLANG)
+
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
@@ -82,6 +84,10 @@ list(APPEND HLSLTEST_DEPS
   FileCheck
   split-file
   clang)
+
+if (HLSLTEST_TEST_CLANG)
+  list(APPEND HLSLTEST_DEPS clang)
+endif()
 
 add_custom_target(hlsl-test-depends DEPENDS ${HLSLTEST_DEPS})
 

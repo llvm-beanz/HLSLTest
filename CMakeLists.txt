@@ -12,6 +12,12 @@ set(HLSLTEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(HLSLTEST_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(HLSLTEST_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(HLSLTEST_COMPILER "dxc" CACHE STRING "Compiler to use for testing (uses dxc from PATH if unset)")
+if ("clang" IN_LIST LLVM_ENABLE_PROJECTS)
+  set(default_HLSLTEST_TEST_CLANG On)
+else()
+set(default_HLSLTEST_TEST_CLANG Off)
+endif()
+option(HLSLTEST_TEST_CLANG "Enable testing clang as the HLSL Compiler" ${default_HLSLTEST_TEST_CLANG})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include
                     ${CMAKE_CURRENT_BINARY_DIR}/include)

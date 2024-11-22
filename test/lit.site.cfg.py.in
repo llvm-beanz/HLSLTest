@@ -7,6 +7,7 @@ config.hlsltest_src_root = path(r"@HLSLTEST_SOURCE_DIR@")
 config.llvm_tools_dir = lit_config.substitute(path(r"@LLVM_TOOLS_DIR@"))
 config.hlsltest_compiler = path(r"@HLSLTEST_COMPILER@")
 config.hlsltest_supports_spirv = @SUPPORTS_SPIRV@
+config.hlsltest_test_clang = @HLSLTEST_TEST_CLANG@
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

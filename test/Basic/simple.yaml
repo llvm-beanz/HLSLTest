@@ -21,7 +21,7 @@ DescriptorSets:
     - Access: ReadWrite
       Format: Float32
       Channels: 4
-      ZeroInitSize: 8
+      ZeroInitSize: 16
       DirectXBinding:
         Register: 1
         Space: 4
@@ -31,6 +31,8 @@ DescriptorSets:
 # RUN: split-file %s %t
 # RUN: %if DirectX %{ dxc -T cs_6_7 -Fo %t.dxil %t/simple.hlsl %}
 # RUN: %if DirectX %{ %gpu-exec %t/simple.yaml %t.dxil | FileCheck %s %}
+# RUN: %if DirectX && Clang %{ clang-dxc -T cs_6_7 -Fo %t-clang.dxil %t/simple.hlsl %}
+# RUN: %if DirectX && Clang %{ %gpu-exec %t/simple.yaml %t-clang.dxil | FileCheck %s %}
 # RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -fspv-target-env=vulkan1.1 -Fo %t.spv %t/simple.hlsl %}
 # RUN: %if Vulkan %{ %gpu-exec %t/simple.yaml %t.spv | FileCheck %s %}
 # XFAIL: Vulkan-NV
@@ -42,4 +44,4 @@ DescriptorSets:
 
 
 # CHECK: Data:
-# CHECK: Data: [ 0
+# CHECK: Data: [ 4, 16, 36, 64 ]

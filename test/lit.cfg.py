@@ -39,9 +39,12 @@ config.test_exec_root = os.path.join(config.hlsltest_obj_root, "test")
 tools = [
     ToolSubst("%gpu-exec", FindTool("gpu-exec")),
     ToolSubst("FileCheck", FindTool("FileCheck")),
-    ToolSubst("split-file", FindTool("split-file")),
-    ToolSubst("clang-dxc", FindTool("clang-dxc"))
+    ToolSubst("split-file", FindTool("split-file"))
 ]
+
+if config.hlsltest_test_clang:
+  tools.append(ToolSubst("clang-dxc", FindTool("clang-dxc")))
+  config.available_features.add("Clang")
 
 if os.path.exists(config.hlsltest_compiler):
   tools.append(ToolSubst("dxc", config.hlsltest_compiler))
