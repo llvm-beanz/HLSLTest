@@ -1,3 +1,4 @@
+#--- source.hlsl
 RWBuffer<float4> Tex;
 
 const static float3 Palette[8] = {float3(0.0, 0.0, 0.0), float3(0.5, 0.5, 0.5),
@@ -50,3 +51,30 @@ const static int Dimension = 4096;
 
   Tex[DID.x] = float4(Color, 1.0);
 }
+
+//--- pipeline.yaml
+---
+DispatchSize: [16384, 1, 1]
+DescriptorSets:
+  - Resources:
+    - Access: ReadWrite
+      Format: Float32
+      Channels: 4
+      ZeroInitSize: 268435456 # 1024 * 1024 * 4 channels / pixel * 4 bytes / channel
+      DirectXBinding:
+        Register: 0
+        Space: 0
+...
+#--- end
+
+# REQUIRES: imagediff
+# this test doesn't yet do anything... so we should skip it.
+
+# RUN: split-file %s %t
+# RUN: %if DirectX %{ dxc -T cs_6_0 -Fo %t.dxil %t/source.hlsl %}
+# RUN: %if DirectX %{ %gpu-exec %t/pipeline.yaml %t.dxil | FileCheck %s %}
+# RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -Fo %t.spv %t/source.hlsl %}
+# RUN: %if Vulkan %{ %gpu-exec %t/pipeline.yaml %t.spv | FileCheck %s %}
+# RUN: %if Metal %{ dxc -T cs_6_0 -Fo %t.dxil %t/source.hlsl %}
+# RUN: %if Metal %{ metal-shaderconverter %t.dxil -o=%t.metallib %}
+# RUN: %if Metal %{ %gpu-exec %t/pipeline.yaml %t.metallib | FileCheck %s %}
