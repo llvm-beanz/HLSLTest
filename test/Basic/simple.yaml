@@ -1,0 +1,45 @@
+#--- simple.hlsl
+RWBuffer<float4> In : register(u0);
+RWBuffer<float4> Out : register(u1, space4);
+
+[numthreads(1,1,1)]
+void main(uint GI : SV_GroupIndex) {
+  Out[GI] = In[GI] * In[GI];
+}
+//--- simple.yaml
+---
+DispatchSize: [1, 1, 1]
+DescriptorSets:
+  - Resources:
+    - Access: ReadWrite
+      Format: Float32
+      Channels: 4
+      Data: [ 2, 4, 6, 8]
+      DirectXBinding:
+        Register: 0
+        Space: 0
+    - Access: ReadWrite
+      Format: Float32
+      Channels: 4
+      ZeroInitSize: 8
+      DirectXBinding:
+        Register: 1
+        Space: 4
+...
+#--- end
+
+# RUN: split-file %s %t
+# RUN: %if DirectX %{ dxc -T cs_6_7 -Fo %t.dxil %t/simple.hlsl %}
+# RUN: %if DirectX %{ %gpu-exec %t/simple.yaml %t.dxil | FileCheck %s %}
+# RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -fspv-target-env=vulkan1.1 -Fo %t.spv %t/simple.hlsl %}
+# RUN: %if Vulkan %{ %gpu-exec %t/simple.yaml %t.spv | FileCheck %s %}
+# XFAIL: Vulkan-NV
+
+# RUN: %if Metal %{ dxc -T cs_6_0 -Fo %t.dxil %t/simple.hlsl %}
+# RUN: %if Metal %{ metal-shaderconverter %t.dxil -o=%t.metallib %}
+# RUN: %if Metal %{ %gpu-exec %t/simple.yaml %t.metallib | FileCheck %s %}
+# XFAIL: Metal
+
+
+# CHECK: Data:
+# CHECK: Data: [ 0
