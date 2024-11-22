@@ -1,0 +1,44 @@
+#--- source.hlsl
+RWBuffer<float> In : register(u0);
+RWBuffer<float> Out : register(u1);
+
+[numthreads(8,1,1)]
+void main(uint3 TID : SV_GroupThreadID) {
+  Out[TID.x] = In[TID.x] + 4.3;
+}
+//--- pipeline.yaml
+
+---
+DispatchSize: [1, 1, 1]
+DescriptorSets:
+  - Resources:
+    - Access: ReadWrite
+      Format: Float32
+      Data: [ 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8 ]
+      DirectXBinding:
+        Register: 0
+        Space: 0
+    - Access: ReadWrite
+      Format: Float32
+      Data: [ 9.9, 10.1, 11.1, 12.2, 13.3, 14.4, 15.5, 16.6]
+      DirectXBinding:
+        Register: 1
+        Space: 0
+...
+#--- end
+
+# RUN: split-file %s %t
+# RUN: %if DirectX %{ dxc -T cs_6_0 -Fo %t.dxil %t/source.hlsl %}
+# RUN: %if DirectX %{ %gpu-exec %t/pipeline.yaml %t.dxil | FileCheck %s %}
+# RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -Fo %t.spv %t/source.hlsl %}
+# RUN: %if Vulkan %{ %gpu-exec %t/pipeline.yaml %t.spv | FileCheck %s %}
+# RUN: %if Metal %{ dxc -T cs_6_0 -Fo %t.dxil %t/source.hlsl %}
+# RUN: %if Metal %{ metal-shaderconverter %t.dxil -o=%t.metallib %}
+# RUN: %if Metal %{ %gpu-exec %t/pipeline.yaml %t.metallib | FileCheck %s %}
+
+# CHECK: Access: ReadWrite
+# CHECK: Format: Float32
+# CHECK: Data: [ 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8 ]
+# CHECK: Access: ReadWrite
+# CHECK: Format: Float32
+# CHECK: Data: [ 5.4, 6.5, 7.6, 8.7, 9.8, 10.9, 12, 13.1 ]
