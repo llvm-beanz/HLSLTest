@@ -79,7 +79,9 @@ configure_lit_site_cfg(
 list(APPEND HLSLTEST_DEPS
   api-query
   gpu-exec
-  FileCheck)
+  FileCheck
+  split-file
+  clang)
 
 add_custom_target(hlsl-test-depends DEPENDS ${HLSLTEST_DEPS})
 
