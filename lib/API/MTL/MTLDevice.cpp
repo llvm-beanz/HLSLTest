@@ -41,11 +41,9 @@ static llvm::Error toError(NS::Error *Err) {
 static MTL::PixelFormat getMTLFormat(DataFormat Format, int Channels) {
   switch (Format) {
   case DataFormat::Int32:
-    MTLFormats(32Sint)
-    break;
+    MTLFormats(32Sint) break;
   case DataFormat::Float32:
-    MTLFormats(32Float)
-    break;
+    MTLFormats(32Float) break;
   default:
     llvm_unreachable("Unsupported Resource format specified");
   }
@@ -60,6 +58,8 @@ class MTLDevice : public hlsltest::Device {
   struct InvocationState {
     InvocationState() { Pool = NS::AutoreleasePool::alloc()->init(); }
     ~InvocationState() {
+      for (auto T : Textures)
+        T->release();
       for (auto B : Buffers)
         B->release();
       if (Fn)
@@ -80,7 +80,8 @@ class MTLDevice : public hlsltest::Device {
     MTL::Function *Fn = nullptr;
     MTL::ComputePipelineState *PipelineState;
     MTL::Buffer *ArgBuffer;
-    llvm::SmallVector<MTL::Texture *> Buffers;
+    llvm::SmallVector<MTL::Texture *> Textures;
+    llvm::SmallVector<MTL::Buffer *> Buffers;
   };
 
   llvm::Error loadShaders(InvocationState &IS, llvm::StringRef Program) {
@@ -104,20 +105,32 @@ class MTLDevice : public hlsltest::Device {
 
   llvm::Error createUAV(Resource &R, InvocationState &IS,
                         const uint32_t HeapIdx) {
-
-    uint64_t Width = R.Size / R.getElementSize();
-    MTL::TextureDescriptor *Desc =
-        MTL::TextureDescriptor::textureBufferDescriptor(
-            getMTLFormat(R.Format, R.Channels), Width, MTL::StorageModeManaged,
-            MTL::ResourceUsageRead | MTL::ResourceUsageWrite);
-
-    MTL::Texture *NewTex = Device->newTexture(Desc);
-    NewTex->replaceRegion(MTL::Region(0, 0, Width, 1), 0, R.Data.get(), 0);
-
-    IS.Buffers.push_back(NewTex);
-
     auto *TablePtr = (IRDescriptorTableEntry *)IS.ArgBuffer->contents();
-    IRDescriptorTableSetTexture(&TablePtr[HeapIdx], NewTex, 0, 0);
+
+    if (R.isRaw()) {
+      MTL::Buffer *Buf =
+          Device->newBuffer(R.Data.get(), R.Size, MTL::StorageModeManaged);
+      IRBufferView View = {};
+      View.buffer = Buf;
+      View.bufferSize = R.Size;
+
+      IRDescriptorTableSetBufferView(&TablePtr[HeapIdx], &View);
+      IS.Buffers.push_back(Buf);
+    } else {
+      uint64_t Width = R.Size / R.getElementSize();
+      MTL::TextureDescriptor *Desc =
+          MTL::TextureDescriptor::textureBufferDescriptor(
+              getMTLFormat(R.Format, R.Channels), Width,
+              MTL::StorageModeManaged,
+              MTL::ResourceUsageRead | MTL::ResourceUsageWrite);
+
+      MTL::Texture *NewTex = Device->newTexture(Desc);
+      NewTex->replaceRegion(MTL::Region(0, 0, Width, 1), 0, R.Data.get(), 0);
+
+      IS.Textures.push_back(NewTex);
+
+      IRDescriptorTableSetTexture(&TablePtr[HeapIdx], NewTex, 0, 0);
+    }
 
     return llvm::Error::success();
   }
@@ -169,6 +182,9 @@ class MTLDevice : public hlsltest::Device {
 
     CmdEncoder->setComputePipelineState(IS.PipelineState);
     CmdEncoder->setBuffer(IS.ArgBuffer, 0, 2);
+    for (uint64_t I = 0; I < IS.Textures.size(); ++I)
+      CmdEncoder->useResource(IS.Textures[I],
+                              MTL::ResourceUsageRead | MTL::ResourceUsageWrite);
     for (uint64_t I = 0; I < IS.Buffers.size(); ++I)
       CmdEncoder->useResource(IS.Buffers[I],
                               MTL::ResourceUsageRead | MTL::ResourceUsageWrite);
@@ -190,15 +206,20 @@ class MTLDevice : public hlsltest::Device {
   }
 
   llvm::Error copyBack(Pipeline &P, InvocationState &IS) {
-    uint32_t HeapIndex = 0; // Start at 1 to skip the argument buffer
+    uint32_t TextureIndex = 0;
+    uint32_t BufferIndex = 0;
     for (auto &D : P.Sets) {
       for (auto &R : D.Resources) {
         switch (R.Access) {
 
         case DataAccess::ReadWrite: {
-          uint64_t Width = R.Size / R.getElementSize();
-          IS.Buffers[HeapIndex++]->getBytes(R.Data.get(), 0,
-                                            MTL::Region(0, 0, Width, 1), 0);
+          if (R.isRaw()) {
+            memcpy(R.Data.get(), IS.Buffers[BufferIndex++]->contents(), R.Size);
+          } else {
+            uint64_t Width = R.Size / R.getElementSize();
+            IS.Textures[TextureIndex++]->getBytes(
+                R.Data.get(), 0, MTL::Region(0, 0, Width, 1), 0);
+          }
           break;
         }
         case DataAccess::ReadOnly:
@@ -241,7 +262,7 @@ public:
     return llvm::Error::success();
   }
 
-  virtual ~MTLDevice(){};
+  virtual ~MTLDevice() {};
 
 private:
   void queryCapabilities() {}
