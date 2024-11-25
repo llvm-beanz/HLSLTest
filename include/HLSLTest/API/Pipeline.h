@@ -46,12 +46,19 @@ struct DirectXBinding {
 struct Resource {
   DataFormat Format;
   int Channels;
+  int RawSize;
   DataAccess Access;
   size_t Size;
   std::unique_ptr<char[]> Data;
   DirectXBinding DXBinding;
 
+  bool isRaw() const {
+    return RawSize > 0;
+  }
+
   uint32_t getElementSize() const {
+    if (isRaw())
+      return RawSize;
     return getSingleElementSize() * Channels;
   }
 

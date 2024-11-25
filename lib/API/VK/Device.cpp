@@ -296,7 +296,8 @@ public:
 
     auto ExDeviceBuf = createBuffer(
         IS,
-        VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT |
+        (R.isRaw() ? VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+                   : VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT) |
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, R.Size);
     if (!ExDeviceBuf)
@@ -378,18 +379,48 @@ public:
     return llvm::Error::success();
   }
 
-  llvm::Error createDescriptorSets(Pipeline &P, InvocationState &IS) {
-    VkDescriptorPoolSize PoolSize = {};
-    PoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-    PoolSize.descriptorCount = P.getDescriptorCount();
+  llvm::Error createDescriptorPool(Pipeline &P, InvocationState &IS) {
+    uint32_t TexelBufferCount = 0;
+    uint32_t StorageBufferCount = 0;
+    for (const auto &S : P.Sets) {
+      for (const auto &R : S.Resources) {
+        if (R.Access == DataAccess::ReadWrite) {
+          if (R.isRaw())
+            StorageBufferCount += 1;
+          else
+            TexelBufferCount += 1;
+        }
+      }
+    }
+    assert(TexelBufferCount + StorageBufferCount == P.getDescriptorCount() &&
+           "Mismatch in descriptor type identification.");
+    llvm::SmallVector<VkDescriptorPoolSize> PoolSizes;
+    if (TexelBufferCount > 0) {
+      VkDescriptorPoolSize PoolSize = {};
+      PoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+      PoolSize.descriptorCount = TexelBufferCount;
+      PoolSizes.push_back(PoolSize);
+    }
+
+    if (StorageBufferCount > 0) {
+      VkDescriptorPoolSize PoolSize = {};
+      PoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+      PoolSize.descriptorCount = StorageBufferCount;
+      PoolSizes.push_back(PoolSize);
+    }
+
     VkDescriptorPoolCreateInfo PoolCreateInfo = {};
     PoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    PoolCreateInfo.poolSizeCount = 1;
-    PoolCreateInfo.pPoolSizes = &PoolSize;
+    PoolCreateInfo.poolSizeCount = PoolSizes.size();
+    PoolCreateInfo.pPoolSizes = PoolSizes.data();
     PoolCreateInfo.maxSets = P.Sets.size();
     if (vkCreateDescriptorPool(IS.Device, &PoolCreateInfo, nullptr, &IS.Pool))
       return llvm::createStringError(std::errc::device_or_resource_busy,
                                      "Failed to create descriptor pool.");
+    return llvm::Error::success();
+  }
+
+  llvm::Error createDescriptorSets(Pipeline &P, InvocationState &IS) {
     for (const auto &S : P.Sets) {
       std::vector<VkDescriptorSetLayoutBinding> Bindings;
       uint32_t BindingIdx = 0;
@@ -397,7 +428,9 @@ public:
         (void)R; // Todo: set this correctly for the data type.
         VkDescriptorSetLayoutBinding Binding = {};
         Binding.binding = BindingIdx++;
-        Binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        Binding.descriptorType = R.isRaw()
+                                     ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
+                                     : VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
         Binding.descriptorCount = 1;
         Binding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
         Bindings.push_back(Binding);
@@ -442,31 +475,46 @@ public:
                                      "Failed to allocate descriptor sets.");
     llvm::SmallVector<VkWriteDescriptorSet> WriteDescriptors;
     assert(IS.BufferViews.empty());
-    IS.BufferViews.insert(IS.BufferViews.begin(), P.getDescriptorCount(),
-                          VkBufferView());
+    llvm::SmallVector<VkDescriptorBufferInfo> RawBufferInfos;
+
     uint32_t UAVIdx = 0;
     for (uint32_t SetIdx = 0; SetIdx < P.Sets.size(); ++SetIdx) {
       for (uint32_t RIdx = 0; RIdx < P.Sets[SetIdx].Resources.size();
            ++RIdx, ++UAVIdx) {
         // This is a hack... need a better way to do this.
         VkBufferViewCreateInfo ViewCreateInfo = {};
-        VkFormat Format = getVKFormat(P.Sets[SetIdx].Resources[RIdx].Format,
-                                      P.Sets[SetIdx].Resources[RIdx].Channels);
+        bool IsRaw = P.Sets[SetIdx].Resources[RIdx].isRaw();
+        VkFormat Format =
+            IsRaw ? VK_FORMAT_UNDEFINED
+                  : getVKFormat(P.Sets[SetIdx].Resources[RIdx].Format,
+                                P.Sets[SetIdx].Resources[RIdx].Channels);
         ViewCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
         ViewCreateInfo.buffer = IS.UAVs[UAVIdx].Device.Buffer;
         ViewCreateInfo.format = Format;
         ViewCreateInfo.range = VK_WHOLE_SIZE;
-        if (vkCreateBufferView(IS.Device, &ViewCreateInfo, nullptr,
-                               &IS.BufferViews[UAVIdx]))
-          return llvm::createStringError(std::errc::device_or_resource_busy,
-                                         "Failed to create buffer view.");
+        if (IsRaw) {
+          VkDescriptorBufferInfo BI = {IS.UAVs[UAVIdx].Device.Buffer, 0,
+                                       VK_WHOLE_SIZE};
+          RawBufferInfos.push_back(BI);
+        } else {
+          IS.BufferViews.push_back(VkBufferView{0});
+          if (vkCreateBufferView(IS.Device, &ViewCreateInfo, nullptr,
+                                 &IS.BufferViews.back()))
+            return llvm::createStringError(std::errc::device_or_resource_busy,
+                                           "Failed to create buffer view.");
+        }
         VkWriteDescriptorSet WDS = {};
         WDS.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         WDS.dstSet = IS.DescriptorSets[SetIdx];
         WDS.dstBinding = RIdx;
         WDS.descriptorCount = 1;
-        WDS.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-        WDS.pTexelBufferView = &IS.BufferViews[UAVIdx];
+        if (IsRaw) {
+          WDS.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+          WDS.pBufferInfo = &RawBufferInfos.back();
+        } else {
+          WDS.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+          WDS.pTexelBufferView = &IS.BufferViews.back();
+        }
         llvm::outs() << "Updating Descriptor [" << UAVIdx << "] { " << SetIdx
                      << ", " << RIdx << " }\n";
         WriteDescriptors.push_back(WDS);
@@ -639,6 +687,9 @@ public:
     if (auto Err = createCommandBuffer(State))
       return Err;
     llvm::outs() << "Execute command buffer created.\n";
+    if (auto Err = createDescriptorPool(P, State))
+      return Err;
+    llvm::outs() << "Descriptor pool created.\n";
     if (auto Err = createDescriptorSets(P, State))
       return Err;
     llvm::outs() << "Descriptor sets created.\n";

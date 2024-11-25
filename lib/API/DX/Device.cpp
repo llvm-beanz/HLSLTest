@@ -372,11 +372,13 @@ public:
 
     const uint32_t EltSize = R.getElementSize();
     const uint32_t NumElts = R.Size / EltSize;
-    DXGI_FORMAT EltFormat = getDXFormat(R.Format, R.Channels);
+    DXGI_FORMAT EltFormat =
+        R.isRaw() ? DXGI_FORMAT_UNKNOWN : getDXFormat(R.Format, R.Channels);
     const D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {
         EltFormat,
         D3D12_UAV_DIMENSION_BUFFER,
-        {D3D12_BUFFER_UAV{0, NumElts, 0, 0, D3D12_BUFFER_UAV_FLAG_NONE}}};
+        {D3D12_BUFFER_UAV{0, NumElts, static_cast<uint32_t>(R.RawSize), 0,
+                          D3D12_BUFFER_UAV_FLAG_NONE}}};
 
     llvm::outs() << "UAV: HeapIdx = " << HeapIdx << " EltSize = " << EltSize
                  << " NumElts = " << NumElts << "\n";

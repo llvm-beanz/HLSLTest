@@ -1,0 +1,44 @@
+#--- source.hlsl
+struct Doggo {
+  int3 Legs;
+  int TailState;
+  int2 Ears;
+};
+
+RWStructuredBuffer<Doggo> Buf;
+
+[numthreads(2,1,1)]
+void main(uint GI : SV_GroupIndex) {
+  Doggo Fido = Buf[GI];
+  if (Fido.TailState == 0) {
+    Fido.TailState = Fido.Legs.x + Fido.Legs.y + Fido.Legs.z;
+  }
+  Buf[GI] = Fido;
+}
+//--- pipeline.yaml
+---
+DispatchSize: [1, 1, 1]
+DescriptorSets:
+  - Resources:
+    - Access: ReadWrite
+      Format: Int32
+      RawSize: 24
+      Data: [ 0, 1, 2, 0, 4, 0, 1, 2, 3, 0, 4, 0]
+      DirectXBinding:
+        Register: 0
+        Space: 0
+...
+#--- end
+
+# RUN: split-file %s %t
+# RUN: %if DirectX %{ dxc -T cs_6_7 -Fo %t.dxil %t/source.hlsl %}
+# RUN: %if DirectX %{ %gpu-exec %t/pipeline.yaml %t.dxil | FileCheck %s %}
+# RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -fspv-target-env=vulkan1.3 -fvk-use-scalar-layout -Fo %t.spv %t/source.hlsl %}
+# RUN: %if Vulkan %{ %gpu-exec %t/pipeline.yaml %t.spv | FileCheck %s %}
+
+# RUN: %if Metal %{ dxc -T cs_6_0 -Fo %t.dxil %t/source.hlsl %}
+# RUN: %if Metal %{ metal-shaderconverter %t.dxil -o=%t.metallib %}
+# RUN: %if Metal %{ %gpu-exec %t/pipeline.yaml %t.metallib | FileCheck %s %}
+
+
+# CHECK: Data: [ 0, 1, 2, 3, 4, 0, 1, 2, 3, 6, 4, 0 ]

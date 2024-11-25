@@ -55,6 +55,8 @@ DescriptorSets:
 # RUN: %if Metal %{ metal-shaderconverter %t.dxil -o=%t.metallib %}
 # RUN: %if Metal %{ %gpu-exec %t/pipeline.yaml %t.metallib | FileCheck %s --check-prefixes=CHECK,METAL %}
 
+# XFAIL: Vulkan-NV
+
 # The behavior of this operation is well-defined on Vulkan and Metal, but not
 # well-defined for DirectX. This test ensures that we get the defined output on
 # Vulkan and Metal, and it just verifies something ran on DX.
