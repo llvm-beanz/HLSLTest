@@ -56,16 +56,15 @@ query_string = subprocess.check_output(api_query)
 devices = yaml.safe_load(query_string)
 
 for device in devices['Devices']:
-  if device['API'] == "DirectX":
+  if device['API'] == "DirectX" and config.hlsltest_enable_d3d12:
     config.available_features.add("DirectX")
     if "Intel" in device['Description']:
       config.available_features.add("DirectX-Intel")
     if "Microsoft Basic Render Driver" == device['Description']:
       config.available_features.add("DirectX-WARP")
-  if device['API'] == "Metal":
+  if device['API'] == "Metal" and config.hlsltest_enable_metal:
     config.available_features.add("Metal")
-  # Only include vulkan features if the compiler supports SPIR-V
-  if device['API'] == "Vulkan" and config.hlsltest_supports_spirv:
+  if device['API'] == "Vulkan" and config.hlsltest_enable_vulkan:
     config.available_features.add("Vulkan")
     if "NVIDIA" in device['Description']:
       config.available_features.add("Vulkan-NV")

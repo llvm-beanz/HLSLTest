@@ -54,30 +54,6 @@ function(try_compile_hlsl output)
   message(STATUS "${output} - ${${output}}")
 endfunction()
 
-try_compile_hlsl(SUPPORTS_SPIRV SOURCE
-                "RWBuffer<int> In : register(u0);
-                RWBuffer<int> Out : register(u1);
-
-                [numthreads(8,1,1)]
-                void main(uint3 TID : SV_GroupThreadID) {
-                  Out[TID.x] = In[TID.x];
-                }"
-                FLAGS -T cs_6_0 -spirv
-)
-
-llvm_canonicalize_cmake_booleans(HLSLTEST_TEST_CLANG)
-
-
-configure_lit_site_cfg(
-  ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
-  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
-  MAIN_CONFIG
-  ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
-  PATHS
-  "HLSLTEST_BINARY_DIR"
-  "LLVM_TOOLS_DIR"
-  )
-
 list(APPEND HLSLTEST_DEPS
   api-query
   gpu-exec
@@ -91,13 +67,65 @@ endif()
 
 add_custom_target(hlsl-test-depends DEPENDS ${HLSLTEST_DEPS})
 
-add_lit_testsuite(check-hlsl "Running the HLSL regression tests"
-  ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS ${HLSLTEST_DEPS}
-  )
-set_target_properties(check-hlsl PROPERTIES FOLDER "HLSL tests")
+try_compile_hlsl(SUPPORTS_SPIRV SOURCE
+                "RWBuffer<int> In : register(u0);
+                RWBuffer<int> Out : register(u1);
 
-add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
-  DEPENDS ${HLSLTEST_DEPS}
-  FOLDER "HLSL tests/Suites"
+                [numthreads(8,1,1)]
+                void main(uint3 TID : SV_GroupThreadID) {
+                  Out[TID.x] = In[TID.x];
+                }"
+                FLAGS -T cs_6_0 -spirv
 )
+
+if (HLSLTEST_ENABLE_D3D12)
+  list(APPEND platforms_to_test d3d12)
+endif()
+
+if (SUPPORTS_SPIRV AND HLSLTEST_ENABLE_VULKAN)
+  list(APPEND platforms_to_test vk)
+endif()
+
+if (HLSLTEST_ENABLE_D3D12)
+  list(APPEND platforms_to_test mtl)
+endif()
+
+llvm_canonicalize_cmake_booleans(HLSLTEST_TEST_CLANG)
+
+# Initialize all platforms to false.
+foreach(platform ${platforms_to_test})
+  set(TEST_${platform} False)
+endforeach()
+
+umbrella_lit_testsuite_begin(check-hlsl)
+foreach(platform ${platforms_to_test})
+  make_directory(${CMAKE_CURRENT_BINARY_DIR}/${platform}/)
+  set(TEST_${platform} True)
+
+  configure_lit_site_cfg(
+    ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+    ${CMAKE_CURRENT_BINARY_DIR}/${platform}/lit.site.cfg.py
+    MAIN_CONFIG
+    ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
+    PATHS
+    "HLSLTEST_BINARY_DIR"
+    "LLVM_TOOLS_DIR"
+    )
+
+    add_lit_testsuite(check-hlsl-${platform}
+    "Running the HLSL regression tests for ${platform}"
+    ${CMAKE_CURRENT_BINARY_DIR}/${platform}
+    DEPENDS ${HLSLTEST_DEPS}
+    )
+  set_target_properties(check-hlsl-${platform} PROPERTIES FOLDER "HLSL tests")
+
+  add_lit_testsuites(hlsl-${platform} ${CMAKE_CURRENT_SOURCE_DIR}
+    DEPENDS ${HLSLTEST_DEPS}
+    FOLDER "HLSL tests/Suites/${platform}"
+  )
+
+  set(TEST_${platform} False)
+endforeach()
+
+umbrella_lit_testsuite_end(check-hlsl)
+set_target_properties(check-hlsl PROPERTIES FOLDER "HLSL tests")
