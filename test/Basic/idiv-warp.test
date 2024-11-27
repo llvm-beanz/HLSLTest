@@ -39,6 +39,7 @@ DescriptorSets:
 ...
 #--- end
 
+# UNSUPPORTED: Clang
 # RUN: split-file %s %t
 # RUN: dxc -T cs_6_0 -Fo %t.dxil %t/source.hlsl
 # RUN: %gpu-exec %t/pipeline.yaml %t.dxil -warp | FileCheck %s
