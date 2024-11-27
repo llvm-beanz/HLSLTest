@@ -7,8 +7,9 @@ config.hlsltest_src_root = path(r"@HLSLTEST_SOURCE_DIR@")
 config.llvm_tools_dir = lit_config.substitute(path(r"@LLVM_TOOLS_DIR@"))
 config.hlsltest_compiler = path(r"@HLSLTEST_COMPILER@")
 config.hlsltest_supports_spirv = @SUPPORTS_SPIRV@
-config.hlsltest_test_clang = @HLSLTEST_TEST_CLANG@
+config.hlsltest_test_clang = @FORCE_CLANG@
 
+config.hlsltest_suite = "@suite@"
 config.hlsltest_enable_d3d12 = @TEST_d3d12@
 config.hlsltest_enable_vulkan = @TEST_vk@
 config.hlsltest_enable_metal = @TEST_mtl@

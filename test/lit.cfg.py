@@ -16,7 +16,7 @@ from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
 
 # name: The name of this test suite.
-config.name = "HLSLTest"
+config.name = "HLSLTest-" + config.hlsltest_suite
 
 # testFormat: The test format to use to interpret tests.
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
@@ -34,7 +34,7 @@ config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt"]
 config.test_source_root = os.path.dirname(__file__)
 
 # test_exec_root: The root path where tests should be run.
-config.test_exec_root = os.path.join(config.hlsltest_obj_root, "test")
+config.test_exec_root = os.path.join(config.hlsltest_obj_root, "test", config.hlsltest_suite)
 
 tools = [
     ToolSubst("%gpu-exec", FindTool("gpu-exec")),
@@ -43,10 +43,9 @@ tools = [
 ]
 
 if config.hlsltest_test_clang:
-  tools.append(ToolSubst("clang-dxc", FindTool("clang-dxc")))
+  tools.append(ToolSubst("dxc", FindTool("clang-dxc")))
   config.available_features.add("Clang")
-
-if os.path.exists(config.hlsltest_compiler):
+else:
   tools.append(ToolSubst("dxc", config.hlsltest_compiler))
 
 llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)

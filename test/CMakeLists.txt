@@ -82,6 +82,7 @@ try_compile_hlsl(SUPPORTS_SPIRV SOURCE
 set(TEST_d3d12 False)
 set(TEST_vk False)
 set(TEST_mtl False)
+set(FORCE_CLANG False)
 
 if (HLSLTEST_ENABLE_D3D12)
   list(APPEND platforms_to_test d3d12)
@@ -103,30 +104,58 @@ endforeach()
 
 umbrella_lit_testsuite_begin(check-hlsl)
 foreach(platform ${platforms_to_test})
-  make_directory(${CMAKE_CURRENT_BINARY_DIR}/${platform}/)
   set(TEST_${platform} True)
+  set(suite ${platform})
 
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
-    ${CMAKE_CURRENT_BINARY_DIR}/${platform}/lit.site.cfg.py
+    ${CMAKE_CURRENT_BINARY_DIR}/${suite}/lit.site.cfg.py
     MAIN_CONFIG
-    ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
+    ${CMAKE_CURRENT_BINARY_DIR}/${suite}/lit.cfg.py
     PATHS
     "HLSLTEST_BINARY_DIR"
     "LLVM_TOOLS_DIR"
     )
 
-    add_lit_testsuite(check-hlsl-${platform}
-    "Running the HLSL regression tests for ${platform}"
-    ${CMAKE_CURRENT_BINARY_DIR}/${platform}
+    add_lit_testsuite(check-hlsl-${suite}
+    "Running the HLSL regression tests for ${suite}"
+    ${CMAKE_CURRENT_BINARY_DIR}/${suite}
     DEPENDS ${HLSLTEST_DEPS}
     )
-  set_target_properties(check-hlsl-${platform} PROPERTIES FOLDER "HLSL tests")
+  set_target_properties(check-hlsl-${suite} PROPERTIES FOLDER "HLSL tests")
 
-  add_lit_testsuites(hlsl-${platform} ${CMAKE_CURRENT_SOURCE_DIR}
+  add_lit_testsuites(hlsl-${suite} ${CMAKE_CURRENT_SOURCE_DIR}
     DEPENDS ${HLSLTEST_DEPS}
-    FOLDER "HLSL tests/Suites/${platform}"
+    FOLDER "HLSL tests/Suites/${suite}"
   )
+
+  if (HLSLTEST_TEST_CLANG)
+    set(FORCE_CLANG True)
+    set(suite clang-${platform})
+
+    configure_lit_site_cfg(
+      ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+      ${CMAKE_CURRENT_BINARY_DIR}/${suite}/lit.site.cfg.py
+      MAIN_CONFIG
+      ${CMAKE_CURRENT_BINARY_DIR}/${suite}/lit.cfg.py
+      PATHS
+      "HLSLTEST_BINARY_DIR"
+      "LLVM_TOOLS_DIR"
+      )
+
+      add_lit_testsuite(check-hlsl-${suite}
+      "Running the HLSL regression tests for ${suite}"
+      ${CMAKE_CURRENT_BINARY_DIR}/${suite}
+      DEPENDS ${HLSLTEST_DEPS}
+      )
+    set_target_properties(check-hlsl-${suite} PROPERTIES FOLDER "HLSL tests")
+
+    add_lit_testsuites(hlsl-${suite} ${CMAKE_CURRENT_SOURCE_DIR}
+      DEPENDS ${HLSLTEST_DEPS}
+      FOLDER "HLSL tests/Suites/${suite}"
+    )
+    set(FORCE_CLANG False)
+  endif()
 
   set(TEST_${platform} False)
 endforeach()
