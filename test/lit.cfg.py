@@ -37,10 +37,15 @@ config.test_source_root = os.path.dirname(__file__)
 config.test_exec_root = os.path.join(config.hlsltest_obj_root, "test", config.hlsltest_suite)
 
 tools = [
-    ToolSubst("%gpu-exec", FindTool("gpu-exec")),
     ToolSubst("FileCheck", FindTool("FileCheck")),
     ToolSubst("split-file", FindTool("split-file"))
 ]
+
+if config.hlsltest_test_warp:
+  config.available_features.add("DirectX-WARP")
+  tools.append(ToolSubst("%gpu-exec", command=FindTool("gpu-exec"), extra_args=["-warp"]))
+else:
+  tools.append(ToolSubst("%gpu-exec", FindTool("gpu-exec")))
 
 if config.hlsltest_test_clang:
   tools.append(ToolSubst("dxc", FindTool("clang-dxc")))
@@ -59,8 +64,6 @@ for device in devices['Devices']:
     config.available_features.add("DirectX")
     if "Intel" in device['Description']:
       config.available_features.add("DirectX-Intel")
-    if "Microsoft Basic Render Driver" == device['Description']:
-      config.available_features.add("DirectX-WARP")
   if device['API'] == "Metal" and config.hlsltest_enable_metal:
     config.available_features.add("Metal")
   if device['API'] == "Vulkan" and config.hlsltest_enable_vulkan:

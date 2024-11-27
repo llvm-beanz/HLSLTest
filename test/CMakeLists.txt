@@ -83,6 +83,7 @@ set(TEST_d3d12 False)
 set(TEST_vk False)
 set(TEST_mtl False)
 set(FORCE_CLANG False)
+set(FORCE_WARP False)
 
 if (HLSLTEST_ENABLE_D3D12)
   list(APPEND platforms_to_test d3d12)
@@ -102,11 +103,7 @@ foreach(platform ${platforms_to_test})
   set(TEST_${platform} False)
 endforeach()
 
-umbrella_lit_testsuite_begin(check-hlsl)
-foreach(platform ${platforms_to_test})
-  set(TEST_${platform} True)
-  set(suite ${platform})
-
+function(add_hlsltest_lit_suite suite)
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
     ${CMAKE_CURRENT_BINARY_DIR}/${suite}/lit.site.cfg.py
@@ -128,37 +125,35 @@ foreach(platform ${platforms_to_test})
     DEPENDS ${HLSLTEST_DEPS}
     FOLDER "HLSL tests/Suites/${suite}"
   )
+endfunction()
+
+umbrella_lit_testsuite_begin(check-hlsl)
+foreach(platform ${platforms_to_test})
+  set(TEST_${platform} True)
+  add_hlsltest_lit_suite(${platform})
 
   if (HLSLTEST_TEST_CLANG)
     set(FORCE_CLANG True)
-    set(suite clang-${platform})
-
-    configure_lit_site_cfg(
-      ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
-      ${CMAKE_CURRENT_BINARY_DIR}/${suite}/lit.site.cfg.py
-      MAIN_CONFIG
-      ${CMAKE_CURRENT_BINARY_DIR}/${suite}/lit.cfg.py
-      PATHS
-      "HLSLTEST_BINARY_DIR"
-      "LLVM_TOOLS_DIR"
-      )
-
-      add_lit_testsuite(check-hlsl-${suite}
-      "Running the HLSL regression tests for ${suite}"
-      ${CMAKE_CURRENT_BINARY_DIR}/${suite}
-      DEPENDS ${HLSLTEST_DEPS}
-      )
-    set_target_properties(check-hlsl-${suite} PROPERTIES FOLDER "HLSL tests")
-
-    add_lit_testsuites(hlsl-${suite} ${CMAKE_CURRENT_SOURCE_DIR}
-      DEPENDS ${HLSLTEST_DEPS}
-      FOLDER "HLSL tests/Suites/${suite}"
-    )
+    add_hlsltest_lit_suite(clang-${platform})
     set(FORCE_CLANG False)
   endif()
 
   set(TEST_${platform} False)
 endforeach()
+
+if (HLSLTEST_ENABLE_D3D12)
+  set(TEST_d3d12 True)
+  set(FORCE_WARP True)
+  add_hlsltest_lit_suite(warp-d3d12)
+
+  if (HLSLTEST_TEST_CLANG)
+    set(FORCE_CLANG True)
+    add_hlsltest_lit_suite(clang-warp-d3d12)
+    set(FORCE_CLANG False)
+  endif()
+
+  set(TEST_d3d12 False)
+endif()
 
 umbrella_lit_testsuite_end(check-hlsl)
 set_target_properties(check-hlsl PROPERTIES FOLDER "HLSL tests")
