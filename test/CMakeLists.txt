@@ -78,6 +78,11 @@ try_compile_hlsl(SUPPORTS_SPIRV SOURCE
                 FLAGS -T cs_6_0 -spirv
 )
 
+# Initialize all platforms to false.
+set(TEST_d3d12 False)
+set(TEST_vk False)
+set(TEST_mtl False)
+
 if (HLSLTEST_ENABLE_D3D12)
   list(APPEND platforms_to_test d3d12)
 endif()
@@ -86,13 +91,12 @@ if (SUPPORTS_SPIRV AND HLSLTEST_ENABLE_VULKAN)
   list(APPEND platforms_to_test vk)
 endif()
 
-if (HLSLTEST_ENABLE_D3D12)
+if (HLSLTEST_ENABLE_METAL)
   list(APPEND platforms_to_test mtl)
 endif()
 
 llvm_canonicalize_cmake_booleans(HLSLTEST_TEST_CLANG)
 
-# Initialize all platforms to false.
 foreach(platform ${platforms_to_test})
   set(TEST_${platform} False)
 endforeach()
