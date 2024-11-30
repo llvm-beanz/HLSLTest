@@ -87,7 +87,7 @@ jobs:
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           cd DXC && mkdir build && cd build
-          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -C $GITHUB_WORKSPACE/DXC/cmake/caches/PredefinedParams.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache $GITHUB_WORKSPACE/DXC/
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -C %GITHUB_WORKSPACE%\DXC\cmake\caches\PredefinedParams.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache %GITHUB_WORKSPACE%\DXC\
           ninja
       - name: Build LLVM
         if: inputs.OS != 'windows'
@@ -101,7 +101,7 @@ jobs:
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           cd llvm-project && mkdir build && cd build
-          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -C $GITHUB_WORKSPACE/llvm-project/clang/cmake/caches/HLSL.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DHLSLTEST_COMPILER=$GITHUB_WORKSPACE/DXC/build/bin/dxc -DLLVM_EXTERNAL_HLSLTEST_SOURCE_DIR=$GITHUB_WORKSPACE/HLSLTest -DLLVM_EXTERNAL_PROJECTS="HLSLTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" $GITHUB_WORKSPACE/llvm-project/llvm/
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -C %GITHUB_WORKSPACE%\llvm-project\clang\cmake\caches\HLSL.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DHLSLTEST_COMPILER=%GITHUB_WORKSPACE%\DXC\build\bin\dxc -DLLVM_EXTERNAL_HLSLTEST_SOURCE_DIR=$GITHUB_WORKSPACE/HLSLTest -DLLVM_EXTERNAL_PROJECTS="HLSLTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" %GITHUB_WORKSPACE%\llvm-project\llvm\
           ninja hlsl-test-depends
       - name: Run HLSL Tests
         if: inputs.OS != 'windows'
