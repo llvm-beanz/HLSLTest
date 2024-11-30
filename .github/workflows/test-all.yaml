@@ -89,7 +89,6 @@ jobs:
           cd DXC && mkdir build && cd build
           cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -C $GITHUB_WORKSPACE/DXC/cmake/caches/PredefinedParams.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache $GITHUB_WORKSPACE/DXC/
           ninja
-        working-directory: path/to/your/project
       - name: Build LLVM
         if: inputs.OS != 'windows'
         run: |
