@@ -28,6 +28,29 @@ on:
         options:
         - macOS
         - windows
+  workflow_call:
+    inputs:
+      HLSLTest-branch:
+        description: 'Test Suite Branch'
+        required: false
+        default: 'main'
+        type: string
+      LLVM-branch:
+        description: 'LLVM Branch'
+        required: false
+        default: 'main'
+        type: string
+      DXC-branch:
+        description: 'DXC Branch'
+        required: false
+        default: 'main'
+        type: string
+      OS:
+        required: true
+        type: choice
+        options:
+        - macOS
+        - windows
 
 jobs:
   build:

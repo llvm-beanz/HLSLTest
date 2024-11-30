@@ -1,0 +1,10 @@
+name: macos-nightly
+on:
+  schedule:
+    - cron: '0 */6 * * *' # run at 2 AM UTC
+
+jobs:
+  windows-latest-build:
+    uses: ./.github/workflows/test-all.yaml
+    with:
+      OS: macOS
