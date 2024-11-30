@@ -33,47 +33,42 @@ jobs:
   build:
     runs-on: [self-hosted, "${{ inputs.OS }}"]
     steps:
-      - group: Checkout
-        steps:
-        - name: Checkout DXC
-          uses: actions/checkout@v4
-          with:
-            repository: Microsoft/DirectXShaderCompiler
-            ref: ${{ inputs.DXC-branch }}
-            path: DXC
-            fetch-depth: 1
-            submodules: true
-        - name: Checkout LLVM
-          uses: actions/checkout@v4
-          with:
-            repository: llvm/llvm-project
-            ref: ${{ inputs.LLVM-branch }}
-            path: llvm-project
-            fetch-depth: 1
-        - name: Checkout HLSLTest
-          uses: actions/checkout@v4
-          with:
-            repository: llvm-beanz/HLSLTest
-            ref: ${{ inputs.HLSLTest-branch }}
-            path: HLSLTest
-            fetch-depth: 1
-      - group: Build and Test (*nix)
-        if: inputs.OS != 'windows'
-        steps:
-        - name: Build DXC
-          run: |
-              cd DXC && mkdir build && cd build
-              cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -C $GITHUB_WORKSPACE/DXC/cmake/caches/PredefinedParams.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache $GITHUB_WORKSPACE/DXC/
-              ninja
-        - name: Build LLVM
-          run: |
-              cd llvm-project && mkdir build && cd build
-              cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -C $GITHUB_WORKSPACE/llvm-project/clang/cmake/caches/HLSL.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DHLSLTest_COMPILER=$GITHUB_WORKSPACE/DXC/build/bin/dxc -DLLVM_EXTERNAL_HLSLTEST_SOURCE_DIR=$GITHUB_WORKSPACE/HLSLTest -DLLVM_EXTERNAL_PROJECTS="HLSLTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DLLVM_HOST_TRIPLE=arm64-apple-darwin24.1.0 $GITHUB_WORKSPACE/DXC/
-              ninja hlsl-test-depends
-        - name: Build LLVM
-          run: |
-              cd llvm-project && mkdir build && cd build
-              ninja check-hlsl
+      - name: Checkout DXC
+        uses: actions/checkout@v4
+        with:
+          repository: Microsoft/DirectXShaderCompiler
+          ref: ${{ inputs.DXC-branch }}
+          path: DXC
+          fetch-depth: 1
+          submodules: true
+      - name: Checkout LLVM
+        uses: actions/checkout@v4
+        with:
+          repository: llvm/llvm-project
+          ref: ${{ inputs.LLVM-branch }}
+          path: llvm-project
+          fetch-depth: 1
+      - name: Checkout HLSLTest
+        uses: actions/checkout@v4
+        with:
+          repository: llvm-beanz/HLSLTest
+          ref: ${{ inputs.HLSLTest-branch }}
+          path: HLSLTest
+          fetch-depth: 1
+      - name: Build DXC
+        run: |
+            cd DXC && mkdir build && cd build
+            cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -C $GITHUB_WORKSPACE/DXC/cmake/caches/PredefinedParams.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache $GITHUB_WORKSPACE/DXC/
+            ninja
+      - name: Build LLVM
+        run: |
+            cd llvm-project && mkdir build && cd build
+            cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -C $GITHUB_WORKSPACE/llvm-project/clang/cmake/caches/HLSL.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DHLSLTest_COMPILER=$GITHUB_WORKSPACE/DXC/build/bin/dxc -DLLVM_EXTERNAL_HLSLTEST_SOURCE_DIR=$GITHUB_WORKSPACE/HLSLTest -DLLVM_EXTERNAL_PROJECTS="HLSLTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DLLVM_HOST_TRIPLE=arm64-apple-darwin24.1.0 $GITHUB_WORKSPACE/DXC/
+            ninja hlsl-test-depends
+      - name: Build LLVM
+        run: |
+            cd llvm-project && mkdir build && cd build
+            ninja check-hlsl
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action/macos@v2
         if: always()
