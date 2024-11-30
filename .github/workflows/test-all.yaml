@@ -63,7 +63,7 @@ jobs:
       - name: Build LLVM
         run: |
             cd llvm-project && mkdir build && cd build
-            cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -C $GITHUB_WORKSPACE/llvm-project/clang/cmake/caches/HLSL.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DHLSLTest_COMPILER=$GITHUB_WORKSPACE/DXC/build/bin/dxc -DLLVM_EXTERNAL_HLSLTEST_SOURCE_DIR=$GITHUB_WORKSPACE/HLSLTest -DLLVM_EXTERNAL_PROJECTS="HLSLTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DLLVM_HOST_TRIPLE=arm64-apple-darwin24.1.0 $GITHUB_WORKSPACE/DXC/
+            cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -C $GITHUB_WORKSPACE/llvm-project/clang/cmake/caches/HLSL.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DHLSLTest_COMPILER=$GITHUB_WORKSPACE/DXC/build/bin/dxc -DLLVM_EXTERNAL_HLSLTEST_SOURCE_DIR=$GITHUB_WORKSPACE/HLSLTest -DLLVM_EXTERNAL_PROJECTS="HLSLTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DLLVM_HOST_TRIPLE=arm64-apple-darwin24.1.0 -DLLVM_TARGET_ARCH=arm64-apple-darwin24.1.0 $GITHUB_WORKSPACE/DXC/
             ninja hlsl-test-depends
       - name: Build LLVM
         run: |
