@@ -37,7 +37,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Microsoft/DirectXShaderCompiler
-          ref: {{ inputs.DXC-branch }}
+          ref: ${{ inputs.DXC-branch }}
           path: DXC
           fetch-depth: 1
           submodules: true
@@ -45,14 +45,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: llvm/llvm-project
-          ref: {{ inputs.LLVM-branch }}
+          ref: ${{ inputs.LLVM-branch }}
           path: llvm-project
           fetch-depth: 1
       - name: Checkout HLSLTest
         uses: actions/checkout@v4
         with:
           repository: llvm-beanz/HLSLTest
-          ref: {{ inputs.HLSLTest-branch }}
+          ref: ${{ inputs.HLSLTest-branch }}
           path: HLSLTest
           fetch-depth: 1
       - name: Build DXC
