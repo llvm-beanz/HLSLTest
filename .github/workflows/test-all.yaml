@@ -72,6 +72,6 @@ jobs:
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action/macos@v2
       if: always()
-        with:
-          comment_mode: off
-          files: llvm-project/build/**/testresults.xunit.xml
+      with:
+        comment_mode: off
+        files: llvm-project/build/**/testresults.xunit.xml
