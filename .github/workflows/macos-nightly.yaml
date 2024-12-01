@@ -1,4 +1,9 @@
 name: macos-nightly
+
+permissions:
+  contents: read
+  checks: write
+
 on:
   schedule:
     - cron: '0 */6 * * *' # run at 2 AM UTC
