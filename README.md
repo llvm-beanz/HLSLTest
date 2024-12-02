@@ -3,8 +3,11 @@ Experimental Runtime test suite for HLSL
 
 ## Current Status
 
-![macOS](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/macos-nightly.yaml/badge.svg)
-![Windows - Intel GPU](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/windows-nightly.yaml/badge.svg)
+| Testing Machine | DXC-Only | Clang & DXC |
+|-----------------|----------|-------------|
+| Windows Intel GPU | ![DXC-Only](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/windows-intel-dxc-only.yaml/badge.svg) | ![Clang & DXC](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/windows-intel.yaml/badge.svg) |
+| macOS Apple M1 | ![DXC-Only](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/macos-dxc-only.yaml/badge.svg) | ![Clang & DXC](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/macos.yaml/badge.svg) |
+
 
 # Prerequisites
 

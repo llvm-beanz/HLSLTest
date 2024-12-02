@@ -1,4 +1,4 @@
-name: windows-Intel-nightly
+name: windows-Intel-dxc-only
 
 permissions:
   contents: read
@@ -6,10 +6,10 @@ permissions:
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # run every 6 hours
+    - cron: '0 */2 * * *' # run every 6 hours
 
 jobs:
-  windows-nightly:
+  windows-Intel-dxc-only:
     uses: ./.github/workflows/test-all.yaml
     with:
       OS: windows

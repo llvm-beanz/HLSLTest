@@ -1,0 +1,16 @@
+name: macos-dxc-only
+
+permissions:
+  contents: read
+  checks: write
+
+on:
+  schedule:
+    - cron: '0 */2 * * *' # run every 6 hours
+
+jobs:
+  macos-dxc-only:
+    uses: ./.github/workflows/test-all.yaml
+    with:
+      OS: macOS
+      Test-Clang: Off
