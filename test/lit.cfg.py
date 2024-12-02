@@ -49,7 +49,7 @@ else:
 
 if config.hlsltest_test_clang:
   if os.path.exists(config.hlsltest_dxv):
-    tools.append(ToolSubst("dxc", FindTool("clang-dxc"), extra_args="--dxv-path=%s" % config.hlsltest_dxv))
+    tools.append(ToolSubst("dxc", FindTool("clang-dxc"), extra_args=["--dxv-path=%s" % config.hlsltest_dxv]))
   else:
     tools.append(ToolSubst("dxc", FindTool("clang-dxc")))
   config.available_features.add("Clang")
