@@ -1,6 +1,11 @@
 # HLSLTest
 Experimental Runtime test suite for HLSL
 
+## Current Status
+
+![macOS](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/macos-nightly.yaml/badge.svg)
+![Windows - Intel GPU](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/windows-nightly.yaml/badge.svg)
+
 # Prerequisites
 
 This project requires being able to locally build LLVM and leverages LLVM's build infrastructure. It also requires installing the `pyyaml` Python package. You can install `pyyaml` by running:
