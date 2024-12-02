@@ -1,4 +1,4 @@
-name: macos-nightly
+name: windows-Intel-nightly
 
 permissions:
   contents: read
@@ -9,7 +9,7 @@ on:
     - cron: '0 */6 * * *' # run every 6 hours
 
 jobs:
-  macos-nightly:
+  windows-nightly:
     uses: ./.github/workflows/test-all.yaml
     with:
-      OS: macOS
+      OS: windows
