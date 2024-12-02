@@ -22,6 +22,12 @@ on:
         required: false
         default: 'main'
         type: string
+      Test-Clang:
+        required: true
+        type: choice
+        options:
+        - On
+        - Off
       OS:
         required: true
         type: choice
@@ -47,6 +53,10 @@ on:
         type: string
       OS:
         required: true
+        type: string
+      Test-Clang:
+        required: false
+        default: 'On'
         type: string
 
 jobs:
@@ -97,7 +107,7 @@ jobs:
             cd llvm-project
             mkdir build
             cd build
-            cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -C ${{ github.workspace }}/llvm-project/clang/cmake/caches/HLSL.cmake -C ${{ github.workspace }}/HLSLTest/cmake/caches/sccache.cmake -DDIRECTX_HEADERS_PATH=${{ github.workspace }}/DXC/external/DirectX-Headers -DDXC_BUILD_DIR=${{ github.workspace }}/DXC/build/bin -DLLVM_EXTERNAL_HLSLTEST_SOURCE_DIR=${{ github.workspace }}/HLSLTest -DLLVM_EXTERNAL_PROJECTS="HLSLTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" ${{ github.workspace }}/llvm-project/llvm/
+            cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -C ${{ github.workspace }}/llvm-project/clang/cmake/caches/HLSL.cmake -C ${{ github.workspace }}/HLSLTest/cmake/caches/sccache.cmake -DDIRECTX_HEADERS_PATH=${{ github.workspace }}/DXC/external/DirectX-Headers -DDXC_BUILD_DIR=${{ github.workspace }}/DXC/build/bin -DLLVM_EXTERNAL_HLSLTEST_SOURCE_DIR=${{ github.workspace }}/HLSLTest -DLLVM_EXTERNAL_PROJECTS="HLSLTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DHLSLTEST_TEST_CLANG=${{ inputs.Test-Clang }} ${{ github.workspace }}/llvm-project/llvm/
             ninja hlsl-test-depends
       - name: Run HLSL Tests
         run: |
