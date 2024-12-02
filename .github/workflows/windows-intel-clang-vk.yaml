@@ -1,4 +1,4 @@
-name: windows-Intel
+name: Windows Vulkan Intel Clang
 
 permissions:
   contents: read

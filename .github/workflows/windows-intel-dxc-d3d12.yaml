@@ -1,4 +1,4 @@
-name: windows-Intel-dxc-only
+name: Windows D3D12 Intel DXC
 
 permissions:
   contents: read

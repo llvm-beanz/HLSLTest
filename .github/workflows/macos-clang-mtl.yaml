@@ -1,4 +1,4 @@
-name: macos
+name: macOS Metal Clang
 
 permissions:
   contents: read
@@ -14,4 +14,4 @@ jobs:
     with:
       OS: macOS
       Test-Clang: On
-      TestTarget: check-clang-mtl
+      TestTarget: check-hlsl-clang-mtl

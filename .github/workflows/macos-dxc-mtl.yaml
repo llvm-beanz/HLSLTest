@@ -1,4 +1,4 @@
-name: macos-dxc-only
+name: macOS Metal DXC
 
 permissions:
   contents: read

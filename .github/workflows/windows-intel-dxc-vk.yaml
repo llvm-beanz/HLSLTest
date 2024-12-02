@@ -1,4 +1,4 @@
-name: windows-Intel-dxc-only
+name: Windows Vulkan Intel DXC
 
 permissions:
   contents: read

@@ -1,4 +1,4 @@
-name: windows-Intel
+name: Windows D3D12 Warp Clang
 
 permissions:
   contents: read
