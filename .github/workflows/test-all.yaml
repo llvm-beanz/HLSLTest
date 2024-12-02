@@ -123,10 +123,15 @@ jobs:
             cd llvm-project
             cd build
             ninja check-hlsl
-      - name: Test Report
-        uses: dorny/test-reporter@v1
-        if: success() || failure()    # run this step even if previous step failed
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action/macos@v2
+        if: always() && inputs.OS == 'macOS'
         with:
-          name: HLSL Tests
+          comment_mode: off
           files: llvm-project/build/**/testresults.xunit.xml
-          reporter: java-junit
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action/windows@v2
+        if: always() && inputs.OS == 'windows'
+        with:
+          comment_mode: off
+          files: llvm-project/build/**/testresults.xunit.xml
