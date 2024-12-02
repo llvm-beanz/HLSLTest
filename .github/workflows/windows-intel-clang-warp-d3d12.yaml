@@ -9,7 +9,7 @@ on:
     - cron: '0 */2 * * *' # run every 12 hours
 
 jobs:
-  windows-Intel:
+  Windows-D3D12-Warp-Clang:
     uses: ./.github/workflows/test-all.yaml
     with:
       OS: windows

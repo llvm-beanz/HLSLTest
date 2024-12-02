@@ -9,7 +9,7 @@ on:
     - cron: '0 */2 * * *' # run every 2 hours
 
 jobs:
-  macos-dxc-only:
+  macOS-Metal-DXC:
     uses: ./.github/workflows/test-all.yaml
     with:
       OS: macOS
