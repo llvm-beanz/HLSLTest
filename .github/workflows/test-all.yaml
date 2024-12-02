@@ -96,7 +96,8 @@ jobs:
             ninja hlsl-test-depends
       - name: Run HLSL Tests
         run: |
-            cd llvm-project && cd build
+            cd llvm-project
+            cd build
             ninja check-hlsl
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action/macos@v2
