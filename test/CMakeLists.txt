@@ -58,8 +58,7 @@ list(APPEND HLSLTEST_DEPS
   api-query
   gpu-exec
   FileCheck
-  split-file
-  clang)
+  split-file)
 
 if (HLSLTEST_TEST_CLANG)
   list(APPEND HLSLTEST_DEPS clang)
