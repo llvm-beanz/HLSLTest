@@ -31,6 +31,10 @@ on:
         - Release
         - RelWithDebInfo
         - Debug
+      TestTarget:
+        required: false
+        default: 'check-hlsl'
+        type: string
       Test-Clang:
         required: true
         type: choice
@@ -71,6 +75,10 @@ on:
       Test-Clang:
         required: false
         default: 'On'
+        type: string
+      TestTarget:
+        required: false
+        default: 'check-hlsl'
         type: string
 
 jobs:
@@ -122,7 +130,7 @@ jobs:
         run: |
             cd llvm-project
             cd build
-            ninja check-hlsl
+            ninja ${{ inputs.TestTarget }}
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action/macos@v2
         if: always() && inputs.OS == 'macOS'

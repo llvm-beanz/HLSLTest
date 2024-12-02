@@ -3,10 +3,12 @@ Experimental Runtime test suite for HLSL
 
 ## Current Status
 
-| Testing Machine | DXC-Only | Clang & DXC |
-|-----------------|----------|-------------|
-| Windows Intel GPU | ![DXC-Only](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/windows-intel-dxc-only.yaml/badge.svg) | ![Clang & DXC](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/windows-intel.yaml/badge.svg) |
-| macOS Apple M1 | ![DXC-Only](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/macos-dxc-only.yaml/badge.svg) | ![Clang & DXC](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/macos.yaml/badge.svg) |
+| Testing Machine | DXC | Clang |
+|-----------------|-----|-------|
+| Windows DirectX12 Intel GPU | ![DXC](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/windows-intel-dxc-d3d12.yaml/badge.svg) | ![Clang](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/windows-intel-clang-d3d12.yaml/badge.svg) |
+| Windows DirectX12 Warp | ![DXC](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/windows-intel-dxc-warp-d3d12.yaml/badge.svg) | ![Clang](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/windows-intel-clang-warp-d3d12.yaml/badge.svg) |
+| Windows Vulkan Intel GPU | ![DXC](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/windows-intel-dxc-vk.yaml/badge.svg) | ![Clang](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/windows-intel-clang-vk.yaml/badge.svg) |
+| macOS Apple M1 | ![DXC](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/macos-dxc-mtl.yaml/badge.svg) | ![Clang & DXC](https://github.com/llvm-beanz/HLSLTEst/actions/workflows/macos-clang-mtl.yaml/badge.svg) |
 
 
 # Prerequisites

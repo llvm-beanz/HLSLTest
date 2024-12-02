@@ -1,0 +1,17 @@
+name: macos
+
+permissions:
+  contents: read
+  checks: write
+
+on:
+  schedule:
+    - cron: '0 */2 * * *' # run every 2 hours
+
+jobs:
+  macos:
+    uses: ./.github/workflows/test-all.yaml
+    with:
+      OS: macOS
+      Test-Clang: On
+      TestTarget: check-clang-mtl

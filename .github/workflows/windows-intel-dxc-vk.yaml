@@ -1,0 +1,18 @@
+name: windows-Intel-dxc-only
+
+permissions:
+  contents: read
+  checks: write
+
+on:
+  schedule:
+    - cron: '0 */2 * * *' # run every 2 hours
+
+jobs:
+  windows-Intel-dxc-only:
+    uses: ./.github/workflows/test-all.yaml
+    with:
+      OS: windows
+      Test-Clang: Off
+      BuildType: Debug
+      TestTarget: check-hlsl-vk
