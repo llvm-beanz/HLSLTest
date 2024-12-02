@@ -85,7 +85,7 @@ jobs:
             cd DXC
             mkdir build
             cd build
-            cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -C ${{ github.workspace }}/DXC/cmake/caches/PredefinedParams.cmake -C ${{ github.workspace }}/HLSLTest/cmake/caches/sccache.cmake ${{ github.workspace }}/DXC/
+            cmake -G Ninja -DCMAKE_POLICY_DEFAULT_CMP0141=NEW -DCMAKE_BUILD_TYPE=Release -C ${{ github.workspace }}/DXC/cmake/caches/PredefinedParams.cmake -C ${{ github.workspace }}/HLSLTest/cmake/caches/sccache.cmake ${{ github.workspace }}/DXC/
             ninja
       - name: Build LLVM
         run: |
