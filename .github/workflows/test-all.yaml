@@ -80,6 +80,12 @@ jobs:
         uses: llvm/actions/setup-windows@main
         with:
           arch: amd64
+      - name: Setup Python env
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: '${{ github.workspace }}/HLSLTest/test/requirements.txt'
       - name: Build DXC
         run: |
             cd DXC
