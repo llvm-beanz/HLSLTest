@@ -29,7 +29,7 @@ DescriptorSets:
 #--- end
 
 # RUN: split-file %s %t
-# RUN: %if DirectX %{ dxc -T cs_6_7 -Fo %t.dxil %t/simple.hlsl %}
+# RUN: %if DirectX %{ dxc -T cs_6_0 -Fo %t.dxil %t/simple.hlsl %}
 # RUN: %if DirectX %{ %gpu-exec %t/simple.yaml %t.dxil | FileCheck %s %}
 # RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -fspv-target-env=vulkan1.1 -Fo %t.spv %t/simple.hlsl %}
 # RUN: %if Vulkan %{ %gpu-exec %t/simple.yaml %t.spv | FileCheck %s %}
