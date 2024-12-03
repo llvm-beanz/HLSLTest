@@ -6,7 +6,7 @@ permissions:
 
 on:
   schedule:
-    - cron: '*/30 * * * *' # run every 30 minutes
+    - cron: '*/30 0-12 * * *' # run every 30 minutes overnight
 
 jobs:
   Windows-D3D12-NVIDIA-DXC:
