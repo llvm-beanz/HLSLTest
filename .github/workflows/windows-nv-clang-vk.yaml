@@ -6,7 +6,7 @@ permissions:
 
 on:
   schedule:
-    - cron: '0 12-24 * * *' # run hourly over night
+    - cron: '0 1,2,12,14,16,18,20,22,24 * * *' # run hourly over night
 
 jobs:
   Windows-VK-Intel-Clang:
