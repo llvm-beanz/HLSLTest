@@ -1,0 +1,18 @@
+name: Windows D3D12 NVIDIA Clang
+
+permissions:
+  contents: read
+  checks: write
+
+on:
+  schedule:
+    - cron: '0 12-24 * *' # run hourly over night
+
+jobs:
+  Windows-D3D12-NVIDIA-Clang:
+    uses: ./.github/workflows/test-all.yaml
+    with:
+      OS: windows
+      SKU: GPU-NV
+      Test-Clang: On
+      TestTarget: check-hlsl-clang-d3d12

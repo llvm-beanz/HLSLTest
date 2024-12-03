@@ -1,0 +1,19 @@
+name: Windows D3D12 NVIDIA DXC
+
+permissions:
+  contents: read
+  checks: write
+
+on:
+  schedule:
+    - cron: '0 12-24 * *' # run hourly over night
+
+jobs:
+  Windows-D3D12-NVIDIA-DXC:
+    uses: ./.github/workflows/test-all.yaml
+    with:
+      OS: windows
+      SKU: GPU-NV
+      Test-Clang: Off
+      BuildType: Debug
+      TestTarget: check-hlsl-d3d12
