@@ -52,25 +52,39 @@ DescriptorSets:
 # UNSUPPORTED: Clang
 # RUN: split-file %s %t
 # RUN: %if DirectX %{ dxc -T cs_6_0 -Fo %t.dxil %t/source.hlsl %}
-# RUN: %if DirectX %{ %gpu-exec %t/pipeline.yaml %t.dxil | FileCheck %s %}
-# RUN: %if DirectX-WARP %{ %gpu-exec %t/pipeline.yaml %t.dxil -warp | FileCheck %s %}
+# RUN: %if DirectX %{ %gpu-exec %t/pipeline.yaml %t.dxil | FileCheck --check-prefixes=CHECK,DX %s %}
 # RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -fspv-target-env=vulkan1.1 -Fo %t.spv %t/source.hlsl %}
 # RUN: %if Vulkan %{ %gpu-exec %t/pipeline.yaml %t.spv | FileCheck %s --check-prefixes=CHECK,VULKAN %}
 # RUN: %if Metal %{ dxc -T cs_6_0 -Fo %t.dxil %t/source.hlsl %}
 # RUN: %if Metal %{ metal-shaderconverter %t.dxil -o=%t.metallib %}
 # RUN: %if Metal %{ %gpu-exec %t/pipeline.yaml %t.metallib | FileCheck %s --check-prefixes=CHECK,METAL %}
 
-# XFAIL: Vulkan-NV
+# The behavior of this operation is consistent on Metal, so the test verifies that behavior.
 
-# The behavior of this operation is well-defined on Vulkan and Metal, but not
-# well-defined for DirectX. This test ensures that we get the defined output on
-# Vulkan and Metal, and it just verifies something ran on DX.
+# The SPIR-V Spec for OpGroupNonUniformFMax says:
+# > From the set of Value(s) provided by active invocations within a subgroup,
+# > if for any two Values one of them is a NaN, the other is chosen. If all
+# > Value(s) that are used by the current invocation are NaN, then the result is
+# > an undefined value.
+
+# This makes Vulkan undefined for cases where all values are nan.
+
+# Also SPIR-V states:
+# > The identity I for Operation is -INF.
+
+# This makes it defined that any lane value of -INF is ignored.
+
+# DirectX driver implementations seem to match SPIR-V, except WARP, which does
+# not treat -INF as an identity.
+
+# XFAIL: DirectX-WARP
 
 # CHECK: Access: ReadWrite
 # CHECK-NEXT: Format: Float32
 # CHECK-NEXT: RawSize: 4
 # METAL-NEXT: Data: [ 0, 0, 0, 0 ]
-# VULKAN-NEXT: Data: [ nan, nan, nan, nan ]
+# DX-NEXT: Data: 
+# VULKAN-NEXT: Data:
 # CHECK: Access: ReadWrite
 # CHECK-NEXT: Format: Float32
 # CHECK-NEXT: RawSize: 4
@@ -78,8 +92,7 @@ DescriptorSets:
 # CHECK: Access: ReadWrite
 # CHECK-NEXT: Format: Float32
 # CHECK-NEXT: RawSize: 4
-# METAL-NEXT: Data: [ 0, 0, 0, 0 ]
-# VULKAN-NEXT: Data: [ -inf, -inf, -inf, -inf ]
+# CHECK-NEXT: Data: [ 0, 0, 0, 0 ]
 # CHECK: Access: ReadWrite
 # CHECK-NEXT: Format: Float32
 # CHECK-NEXT: RawSize: 4

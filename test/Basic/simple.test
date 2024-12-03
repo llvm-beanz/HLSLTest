@@ -1,6 +1,13 @@
 #--- simple.hlsl
-RWBuffer<float4> In : register(u0);
-RWBuffer<float4> Out : register(u1, space4);
+
+#if defined(__spirv__) || defined(__SPIRV__)
+#define REGISTER(Idx, Space)
+#else
+#define REGISTER(Idx, Space) : register(Idx, Space)
+#endif
+
+RWBuffer<float4> In REGISTER(u0, space0);
+RWBuffer<float4> Out REGISTER(u1, space4);
 
 [numthreads(1,1,1)]
 void main(uint GI : SV_GroupIndex) {
