@@ -102,6 +102,10 @@ foreach(platform ${platforms_to_test})
   set(TEST_${platform} False)
 endforeach()
 
+# Because this path comes in from a user, we need to normalize it before
+# expanding it into lit.
+cmake_path(SET DXC_DIR NORMALIZE "${DXC_DIR}")
+
 function(add_hlsltest_lit_suite suite)
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
