@@ -1,8 +1,8 @@
 #--- source.hlsl
-RWBuffer<float> Nans : register(u0);
-RWBuffer<float> Infs : register(u1);
-RWBuffer<float> NegInfs : register(u2);
-RWBuffer<float> Mix : register(u3);
+RWStructuredBuffer<float> Nans : register(u0);
+RWStructuredBuffer<float> Infs : register(u1);
+RWStructuredBuffer<float> NegInfs : register(u2);
+RWStructuredBuffer<float> Mix : register(u3);
 
 [numthreads(32,1,1)]
 void main(uint3 TID : SV_GroupThreadID) {
@@ -19,24 +19,28 @@ DescriptorSets:
   - Resources:
     - Access: ReadWrite
       Format: Float32
+      RawSize: 4
       Data: [ nan, nan, nan, nan ]
       DirectXBinding:
         Register: 0
         Space: 0
     - Access: ReadWrite
       Format: Float32
+      RawSize: 4
       Data: [ inf, inf, inf, inf ]
       DirectXBinding:
         Register: 1
         Space: 0
     - Access: ReadWrite
       Format: Float32
+      RawSize: 4
       Data: [ -inf, -inf, -inf, -inf ]
       DirectXBinding:
         Register: 2
         Space: 0
     - Access: ReadWrite
       Format: Float32
+      RawSize: 4
       Data: [ inf, -inf, nan, 0 ]
       DirectXBinding:
         Register: 3
@@ -62,17 +66,21 @@ DescriptorSets:
 # well-defined for DirectX. This test ensures that we get the defined output on
 # Vulkan and Metal, and it just verifies something ran on DX.
 
-# CHECK: Access:          ReadWrite
-# CHECK-NEXT: Format:          Float32
-# METAL-NEXT: Data:            [ 0, 0, 0, 0 ]
-# VULKAN-NEXT: Data:            [ nan, nan, nan, nan ]
-# CHECK: Access:          ReadWrite
-# CHECK-NEXT: Format:          Float32
-# CHECK-NEXT: Data:            [ inf, inf, inf, inf ]
-# CHECK: Access:          ReadWrite
-# CHECK-NEXT: Format:          Float32
-# METAL-NEXT: Data:            [ 0, 0, 0, 0 ]
-# VULKAN-NEXT: Data:            [ -inf, -inf, -inf, -inf ]
-# CHECK: Access:          ReadWrite
-# CHECK-NEXT: Format:          Float32
-# CHECK-NEXT: Data:            [ inf, inf, inf, inf ]
+# CHECK: Access: ReadWrite
+# CHECK-NEXT: Format: Float32
+# CHECK-NEXT: RawSize: 4
+# METAL-NEXT: Data: [ 0, 0, 0, 0 ]
+# VULKAN-NEXT: Data: [ nan, nan, nan, nan ]
+# CHECK: Access: ReadWrite
+# CHECK-NEXT: Format: Float32
+# CHECK-NEXT: RawSize: 4
+# CHECK-NEXT: Data: [ inf, inf, inf, inf ]
+# CHECK: Access: ReadWrite
+# CHECK-NEXT: Format: Float32
+# CHECK-NEXT: RawSize: 4
+# METAL-NEXT: Data: [ 0, 0, 0, 0 ]
+# VULKAN-NEXT: Data: [ -inf, -inf, -inf, -inf ]
+# CHECK: Access: ReadWrite
+# CHECK-NEXT: Format: Float32
+# CHECK-NEXT: RawSize: 4
+# CHECK-NEXT: Data: [ inf, inf, inf, inf ]

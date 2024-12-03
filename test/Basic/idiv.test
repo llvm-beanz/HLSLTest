@@ -1,7 +1,7 @@
 #--- source.hlsl
-RWBuffer<int> Buf : register(u0);
-RWBuffer<int> Zeros : register(u1);
-RWBuffer<int> NegOnes : register(u2);
+RWStructuredBuffer<int> Buf : register(u0);
+RWStructuredBuffer<int> Zeros : register(u1);
+RWStructuredBuffer<int> NegOnes : register(u2);
 
 [numthreads(8,1,1)]
 void main(uint3 TID : SV_GroupThreadID) {
@@ -18,18 +18,21 @@ DescriptorSets:
   - Resources:
     - Access: ReadWrite
       Format: Int32
+      RawSize: 4
       Data: [ 1, -1, 2147483647, -2147483648, 0]
       DirectXBinding:
         Register: 0
         Space: 0
     - Access: ReadWrite
       Format: Int32
+      RawSize: 4
       Data: [ 0, 0, 0, 0, 0]
       DirectXBinding:
         Register: 1
         Space: 0
     - Access: ReadWrite
       Format: Int32
+      RawSize: 4
       Data: [ -1, -1, -1, -1, -1]
       DirectXBinding:
         Register: 2
@@ -58,7 +61,9 @@ DescriptorSets:
 # CHECK: Access: ReadWrite
 # CHECK: Access: ReadWrite
 # CHECK-NEXT: Format: Int32
+# CHECK-NEXT: RawSize: 4
 # CHECK-NEXT: Data: [ -1, -1, -1, -1, -1 ]
 # CHECK: Access: ReadWrite
 # CHECK-NEXT: Format: Int32
+# CHECK-NEXT: RawSize: 4
 # CHECK-NEXT: Data: [ -1, 1, -2147483647, -2147483648, 0 ]
