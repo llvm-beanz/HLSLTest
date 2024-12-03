@@ -23,6 +23,11 @@ else()
 endif()
 option(HLSLTEST_TEST_CLANG "Enable testing clang as the HLSL Compiler" ${default_HLSLTEST_TEST_CLANG})
 
+option(HLSLTEST_WARP_ONLY "Only generate Warp configurations (useful for testing in VMs, Windows-only)." OFF)
+if (HLSLTEST_WARP_ONLY AND NOT WIN32)
+  message(FATAL_ERROR "HLSLTEST_WARP_ONLY is only suppoted on Windows hosts!")
+endif()
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include
                     ${CMAKE_CURRENT_BINARY_DIR}/include)
 
@@ -81,6 +86,9 @@ if (WIN32)
   set(SKIP_INSTALL_EXPORT On)
 endif ()
 add_subdirectory(third-party/libpng)
+
+include(Warp)
+
 add_subdirectory(lib)
 add_subdirectory(tools)
 
