@@ -487,7 +487,7 @@ public:
               IS.Fence->SetEventOnCompletion(CurrentCounter, IS.Event),
               "Failed to register end event."))
         return Err;
-      WaitForSingleObject(IS.Fence, INFINITE);
+      WaitForSingleObject(IS.Event, INFINITE);
     }
     FenceCounter = CurrentCounter;
     return llvm::Error::success();
