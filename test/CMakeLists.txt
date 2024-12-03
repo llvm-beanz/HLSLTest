@@ -20,7 +20,7 @@ function(try_compile_hlsl output)
   set(TRY_COMPILE_FLAGS "${ARG_FLAGS}")
   string(REPLACE ";" " " extra_flags "${TRY_COMPILE_FLAGS}")
 
-  set(test_compile_command ${HLSLTEST_COMPILER} ${extra_flags} ${SIMPLE_HLSL})
+  set(test_compile_command ${DXC_EXECUTABLE} ${extra_flags} ${SIMPLE_HLSL})
   string(REPLACE "\"" "" test_compile_command "${test_compile_command}")
   string(REPLACE " " ";" test_compile_command "${test_compile_command}")
 

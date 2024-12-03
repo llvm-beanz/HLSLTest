@@ -48,13 +48,13 @@ else:
   tools.append(ToolSubst("%gpu-exec", FindTool("gpu-exec")))
 
 if config.hlsltest_test_clang:
-  if os.path.exists(config.hlsltest_dxv):
-    tools.append(ToolSubst("dxc", FindTool("clang-dxc"), extra_args=["--dxv-path=%s" % config.hlsltest_dxv]))
+  if os.path.exists(config.hlsltest_dxc_dir):
+    tools.append(ToolSubst("dxc", FindTool("clang-dxc"), extra_args=["--dxv-path=%s" % config.hlsltest_dxc_dir]))
   else:
     tools.append(ToolSubst("dxc", FindTool("clang-dxc")))
   config.available_features.add("Clang")
 else:
-  tools.append(ToolSubst("dxc", config.hlsltest_compiler))
+  tools.append(ToolSubst("dxc", config.hlsltest_dxc))
 
 llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
 

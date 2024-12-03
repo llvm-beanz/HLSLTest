@@ -31,7 +31,7 @@ If you do not have a build of dxc on your path you'll need to specify the shader
 compiler to use by passing:
 
 ```shell
--DHLSLTEST_COMPILER=<path to compiler>
+-DDXC_DIR=<path to folder containing dxc & dxv>
 ```
 
 # YAML Pipeline Format
