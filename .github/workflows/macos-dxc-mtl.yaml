@@ -13,5 +13,6 @@ jobs:
     uses: ./.github/workflows/test-all.yaml
     with:
       OS: macOS
+      SKU: macOS
       Test-Clang: Off
       TestTarget: check-hlsl-mtl

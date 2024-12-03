@@ -17,6 +17,11 @@ on:
         required: false
         default: 'main'
         type: string
+      LLVM-fork:
+        description: 'LLVM fork'
+        required: false
+        default: 'llvm'
+        type: string
       DXC-branch:
         description: 'DXC Branch'
         required: false
@@ -47,6 +52,13 @@ on:
         options:
         - macOS
         - windows
+      SKU:
+        required: true
+        type: choice
+        options:
+        - macOS
+        - GPU-Intel
+        - GPU-NV
   workflow_call:
     inputs:
       HLSLTest-branch:
@@ -59,12 +71,20 @@ on:
         required: false
         default: 'main'
         type: string
+      LLVM-fork:
+        description: 'LLVM For'
+        required: false
+        default: 'llvm'
+        type: string
       DXC-branch:
         description: 'DXC Branch'
         required: false
         default: 'main'
         type: string
       OS:
+        required: true
+        type: string
+      SKU:
         required: true
         type: string
       BuildType:
@@ -83,7 +103,7 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, "${{ inputs.OS }}"]
+    runs-on: [self-hosted, "${{ inputs.SKU }}"]
     steps:
       - name: Checkout DXC
         uses: actions/checkout@v4
@@ -96,7 +116,7 @@ jobs:
       - name: Checkout LLVM
         uses: actions/checkout@v4
         with:
-          repository: llvm/llvm-project
+          repository: ${{ inputs.LLVM-fork }}/llvm-project
           ref: ${{ inputs.LLVM-branch }}
           path: llvm-project
           fetch-depth: 1
