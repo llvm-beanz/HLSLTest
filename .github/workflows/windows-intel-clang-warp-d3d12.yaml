@@ -6,7 +6,7 @@ permissions:
 
 on:
   schedule:
-    - cron: '0 */2 * * *' # run every 12 hours
+    - cron: '0,30 * * * *' # run every 30 minutes
 
 jobs:
   Windows-D3D12-Warp-Clang:

@@ -6,7 +6,7 @@ permissions:
 
 on:
   schedule:
-    - cron: '0 */2 * * *' # run every 2 hours
+    - cron: '0,30 * * * *' # run every 30 minutes
 
 jobs:
   macOS-Metal-Clang:
