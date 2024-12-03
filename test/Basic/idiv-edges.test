@@ -19,7 +19,7 @@ DescriptorSets:
     - Access: ReadWrite
       Format: Int32
       RawSize: 4
-      Data: [ 1, -1, 2147483647, -2147483648, 0]
+      Data: [ 1, -1, 2147483647, 0, -2147483648]
       DirectXBinding:
         Register: 0
         Space: 0
@@ -57,4 +57,7 @@ DescriptorSets:
 # CHECK: Access: ReadWrite
 # CHECK-NEXT: Format: Int32
 # CHECK-NEXT: RawSize: 4
-# CHECK-NEXT: Data: [ -1, 1, -2147483647, 2147483647, 0 ]
+# CHECK-NEXT: Data: [ -1, 1, -2147483647, 0
+
+# The last case here is definitly fun UB. -2147483648 / -1 on some GPUs returns
+# 2147483647 and on others returns -2147483648.
