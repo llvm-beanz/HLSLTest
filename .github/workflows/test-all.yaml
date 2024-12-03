@@ -137,9 +137,9 @@ jobs:
         with:
           comment_mode: off
           files: llvm-project/build/**/testresults.xunit.xml
-      - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action/windows@v2
-        if: always() && inputs.OS == 'windows'
-        with:
-          comment_mode: off
-          files: llvm-project/build/**/testresults.xunit.xml
+      #- name: Publish Test Results
+      #  uses: EnricoMi/publish-unit-test-result-action/windows@v2
+      #  if: always() && inputs.OS == 'windows'
+      #  with:
+      #    comment_mode: off
+      #    files: llvm-project/build/**/testresults.xunit.xml
