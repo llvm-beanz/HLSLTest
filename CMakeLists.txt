@@ -63,12 +63,7 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/HLSLTest/Config.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/include/HLSLTest/Config.h)
 
-if (D3D12_INCLUDE_DIRS AND NOT DIRECTX_HEADERS_PATH)
-  set(DIRECTX_HEADERS_PATH ${CURRENT_CMAKE_BINARY_DIR}/DirectX-Headers)
-  ExternalProject_Add(DIRECTX_HEADERS
-                      GIT_REPOSITORY https://github.com/microsoft/DirectX-Headers.git
-                      SOURCE_DIR ${DIRECTX_HEADERS_PATH})
-endif ()
+set(DIRECTX_HEADERS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/third-party/DirectX-Headers)
 
 if (WIN32)
   message(STATUS "Including vendored zlib")
