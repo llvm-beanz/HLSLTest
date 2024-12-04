@@ -519,7 +519,8 @@ public:
 
     uint32_t Inc = Device->GetDescriptorHandleIncrementSize(
         D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-    CD3DX12_GPU_DESCRIPTOR_HANDLE Handle{IS.DescHeap->GetGPUDescriptorHandleForHeapStart()};
+    CD3DX12_GPU_DESCRIPTOR_HANDLE Handle{
+        IS.DescHeap->GetGPUDescriptorHandleForHeapStart()};
 
     for (uint32_t Idx = 0; Idx < P.Sets.size(); ++Idx) {
       IS.CmdList->SetComputeRootDescriptorTable(Idx, Handle);
