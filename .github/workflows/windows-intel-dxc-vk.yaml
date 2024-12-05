@@ -8,8 +8,23 @@ on:
   schedule:
     - cron: '*/30 * * * *' # run every 30 minutes
 
+  pull_request:
+    branches:
+      - main
+
 jobs:
+  Windows-VK-Intel-DXC-PR:
+    if: ${{ github.event.issue.pull_request }}
+    uses: ./.github/workflows/test-all.yaml
+    with:
+      OS: windows
+      SKU: GPU-Intel
+      Test-Clang: Off
+      BuildType: Debug
+      TestTarget: check-hlsl-vk
+      HLSLTest-branch: ${{ github.event.pull_request.head.sha }}
   Windows-VK-Intel-DXC:
+    if: ${{ !github.event.issue.pull_request }}
     uses: ./.github/workflows/test-all.yaml
     with:
       OS: windows
