@@ -553,7 +553,7 @@ public:
         ResourcePair->second.Readback->Unmap(0, nullptr);
       }
     }
-    return waitForSignal(IS);
+    return llvm::Error::success();
   }
 
   llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) override {
@@ -587,9 +587,6 @@ public:
     if (auto Err = readBack(P, State))
       return Err;
     llvm::outs() << "Read data back.\n";
-    if (auto Err = waitForSignal(State))
-      return Err;
-    llvm::outs() << "Wait and Sync...\n";
 
     return llvm::Error::success();
   }
