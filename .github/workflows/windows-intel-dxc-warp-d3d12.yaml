@@ -8,6 +8,10 @@ on:
   schedule:
     - cron: '*/30 * * * *' # run every 30 minutes
 
+  pull_request:
+    branches:
+      - main
+
 jobs:
   Windows-D3D12-Warp-DXC-PR:
     if: ${{ github.event.issue.pull_request }}
