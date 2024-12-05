@@ -286,7 +286,7 @@ public:
                                  CComPtr<ID3D12Resource> Source) {
     addUploadBeginBarrier(IS, Destination);
     IS.CmdList->CopyBufferRegion(Destination, 0, Source, 0, R.Size);
-    addUploadEndBarrier(IS, Destination, R.Access == DataAccess::ReadOnly);
+    addUploadEndBarrier(IS, Destination, R.Access == DataAccess::ReadWrite);
   }
 
   llvm::Error createSRV(Resource &R, InvocationState &IS,
@@ -504,14 +504,8 @@ public:
     return waitForSignal(IS);
   }
 
-  llvm::Error createComputeCommands(Pipeline &P, InvocationState &IS) {
-    if (auto Err =
-            HR::toError(IS.Allocator->Reset(), "Failed to reset allocator."))
-      return Err;
-    if (auto Err = HR::toError(IS.CmdList->Reset(IS.Allocator, IS.PSO),
-                               "Failed to reset command list."))
-      return Err;
-
+  void createComputeCommands(Pipeline &P, InvocationState &IS) {
+    IS.CmdList->SetPipelineState(IS.PSO);
     IS.CmdList->SetComputeRootSignature(IS.RootSig);
 
     ID3D12DescriptorHeap *const Heaps[] = {IS.DescHeap};
@@ -535,8 +529,6 @@ public:
       IS.CmdList->CopyResource(Out.second.Readback, Out.second.Buffer);
       addReadbackEndBarrier(IS, Out.second.Buffer);
     }
-
-    return llvm::Error::success();
   }
 
   llvm::Error readBack(Pipeline &P, InvocationState &IS) {
@@ -559,7 +551,7 @@ public:
         ResourcePair->second.Readback->Unmap(0, nullptr);
       }
     }
-    return waitForSignal(IS);
+    return llvm::Error::success();
   }
 
   llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) override {
@@ -585,11 +577,7 @@ public:
     if (auto Err = createEvent(State))
       return Err;
     llvm::outs() << "Event prepared.\n";
-    if (auto Err = executeCommandList(State))
-      return Err;
-    llvm::outs() << "Preparation commands executed.\n";
-    if (auto Err = createComputeCommands(P, State))
-      return Err;
+    createComputeCommands(P, State);
     llvm::outs() << "Compute command list created.\n";
     if (auto Err = executeCommandList(State))
       return Err;
@@ -597,9 +585,6 @@ public:
     if (auto Err = readBack(P, State))
       return Err;
     llvm::outs() << "Read data back.\n";
-    if (auto Err = waitForSignal(State))
-      return Err;
-    llvm::outs() << "Wait and Sync...\n";
 
     return llvm::Error::success();
   }
