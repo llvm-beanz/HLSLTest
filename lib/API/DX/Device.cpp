@@ -504,14 +504,8 @@ public:
     return waitForSignal(IS);
   }
 
-  llvm::Error createComputeCommands(Pipeline &P, InvocationState &IS) {
-    if (auto Err =
-            HR::toError(IS.Allocator->Reset(), "Failed to reset allocator."))
-      return Err;
-    if (auto Err = HR::toError(IS.CmdList->Reset(IS.Allocator, IS.PSO),
-                               "Failed to reset command list."))
-      return Err;
-
+  void createComputeCommands(Pipeline &P, InvocationState &IS) {
+    IS.CmdList->SetPipelineState(IS.PSO);
     IS.CmdList->SetComputeRootSignature(IS.RootSig);
 
     ID3D12DescriptorHeap *const Heaps[] = {IS.DescHeap};
@@ -537,8 +531,6 @@ public:
       IS.CmdList->CopyResource(Out.second.Readback, Out.second.Buffer);
       addReadbackEndBarrier(IS, Out.second.Buffer);
     }
-
-    return llvm::Error::success();
   }
 
   llvm::Error readBack(Pipeline &P, InvocationState &IS) {
@@ -587,11 +579,7 @@ public:
     if (auto Err = createEvent(State))
       return Err;
     llvm::outs() << "Event prepared.\n";
-    if (auto Err = executeCommandList(State))
-      return Err;
-    llvm::outs() << "Preparation commands executed.\n";
-    if (auto Err = createComputeCommands(P, State))
-      return Err;
+    createComputeCommands(P, State);
     llvm::outs() << "Compute command list created.\n";
     if (auto Err = executeCommandList(State))
       return Err;
