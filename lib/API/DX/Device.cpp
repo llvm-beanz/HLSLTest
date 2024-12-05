@@ -286,7 +286,7 @@ public:
                                  CComPtr<ID3D12Resource> Source) {
     addUploadBeginBarrier(IS, Destination);
     IS.CmdList->CopyBufferRegion(Destination, 0, Source, 0, R.Size);
-    addUploadEndBarrier(IS, Destination, R.Access == DataAccess::ReadOnly);
+    addUploadEndBarrier(IS, Destination, R.Access == DataAccess::ReadWrite);
   }
 
   llvm::Error createSRV(Resource &R, InvocationState &IS,
