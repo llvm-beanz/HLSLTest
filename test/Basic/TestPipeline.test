@@ -31,12 +31,12 @@ DescriptorSets:
 # UNSUPPORTED: Clang
 # RUN: split-file %s %t
 # RUN: %if DirectX %{ dxc -T cs_6_0 -Fo %t.dxil %t/source.hlsl %}
-# RUN: %if DirectX %{ %gpu-exec %t/pipeline.yaml %t.dxil | FileCheck %s %}
+# RUN: %if DirectX %{ %offloader %t/pipeline.yaml %t.dxil | FileCheck %s %}
 # RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -Fo %t.spv %t/source.hlsl %}
-# RUN: %if Vulkan %{ %gpu-exec %t/pipeline.yaml %t.spv | FileCheck %s %}
+# RUN: %if Vulkan %{ %offloader %t/pipeline.yaml %t.spv | FileCheck %s %}
 # RUN: %if Metal %{ dxc -T cs_6_0 -Fo %t.dxil %t/source.hlsl %}
 # RUN: %if Metal %{ metal-shaderconverter %t.dxil -o=%t.metallib %}
-# RUN: %if Metal %{ %gpu-exec %t/pipeline.yaml %t.metallib | FileCheck %s %}
+# RUN: %if Metal %{ %offloader %t/pipeline.yaml %t.metallib | FileCheck %s %}
 
 # CHECK: Access: ReadWrite
 # CHECK: Format: Int32

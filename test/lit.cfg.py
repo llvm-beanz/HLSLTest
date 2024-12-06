@@ -43,9 +43,9 @@ tools = [
 
 if config.hlsltest_test_warp:
   config.available_features.add("DirectX-WARP")
-  tools.append(ToolSubst("%gpu-exec", command=FindTool("gpu-exec"), extra_args=["-warp"]))
+  tools.append(ToolSubst("%offloader", command=FindTool("offloader"), extra_args=["-warp"]))
 else:
-  tools.append(ToolSubst("%gpu-exec", FindTool("gpu-exec")))
+  tools.append(ToolSubst("%offloader", FindTool("offloader")))
 
 if config.hlsltest_test_clang:
   if os.path.exists(config.hlsltest_dxc_dir):
