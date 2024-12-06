@@ -1,2 +1,2 @@
 add_subdirectory(api-query)
-add_subdirectory(gpu-exec)
+add_subdirectory(offloader)

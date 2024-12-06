@@ -52,12 +52,12 @@ DescriptorSets:
 # UNSUPPORTED: Clang
 # RUN: split-file %s %t
 # RUN: %if DirectX %{ dxc -T cs_6_0 -Fo %t.dxil %t/source.hlsl %}
-# RUN: %if DirectX %{ %gpu-exec %t/pipeline.yaml %t.dxil | FileCheck --check-prefixes=CHECK,DX %s %}
+# RUN: %if DirectX %{ %offloader %t/pipeline.yaml %t.dxil | FileCheck --check-prefixes=CHECK,DX %s %}
 # RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -fspv-target-env=vulkan1.1 -Fo %t.spv %t/source.hlsl %}
-# RUN: %if Vulkan %{ %gpu-exec %t/pipeline.yaml %t.spv | FileCheck %s --check-prefixes=CHECK,VULKAN %}
+# RUN: %if Vulkan %{ %offloader %t/pipeline.yaml %t.spv | FileCheck %s --check-prefixes=CHECK,VULKAN %}
 # RUN: %if Metal %{ dxc -T cs_6_0 -Fo %t.dxil %t/source.hlsl %}
 # RUN: %if Metal %{ metal-shaderconverter %t.dxil -o=%t.metallib %}
-# RUN: %if Metal %{ %gpu-exec %t/pipeline.yaml %t.metallib | FileCheck %s --check-prefixes=CHECK,METAL %}
+# RUN: %if Metal %{ %offloader %t/pipeline.yaml %t.metallib | FileCheck %s --check-prefixes=CHECK,METAL %}
 
 # The behavior of this operation is consistent on Metal, so the test verifies that behavior.
 
@@ -83,7 +83,7 @@ DescriptorSets:
 # CHECK-NEXT: Format: Float32
 # CHECK-NEXT: RawSize: 4
 # METAL-NEXT: Data: [ 0, 0, 0, 0 ]
-# DX-NEXT: Data: 
+# DX-NEXT: Data:
 # VULKAN-NEXT: Data:
 # CHECK: Access: ReadWrite
 # CHECK-NEXT: Format: Float32

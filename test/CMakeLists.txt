@@ -56,7 +56,7 @@ endfunction()
 
 list(APPEND HLSLTEST_DEPS
   api-query
-  gpu-exec
+  offloader
   FileCheck
   split-file)
 
