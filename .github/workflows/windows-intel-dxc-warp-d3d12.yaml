@@ -13,18 +13,7 @@ on:
       - main
 
 jobs:
-  Windows-D3D12-Warp-DXC-PR:
-    if: ${{ github.event.issue.pull_request }}
-    uses: ./.github/workflows/test-all.yaml
-    with:
-      OS: windows
-      SKU: GPU-Intel
-      Test-Clang: Off
-      BuildType: Debug
-      TestTarget: check-hlsl-warp-d3d12
-      HLSLTest-branch: ${{ github.event.pull_request.head.sha }}
   Windows-D3D12-Warp-DXC:
-    if: ${{ !github.event.issue.pull_request }}
     uses: ./.github/workflows/test-all.yaml
     with:
       OS: windows
@@ -32,3 +21,4 @@ jobs:
       Test-Clang: Off
       BuildType: Debug
       TestTarget: check-hlsl-warp-d3d12
+      HLSLTest-branch: ${{ github.ref }}

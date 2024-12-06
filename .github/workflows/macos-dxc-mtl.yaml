@@ -13,20 +13,11 @@ on:
       - main
 
 jobs:
-  macOS-Metal-DXC-PR:
-    if: ${{ github.event.issue.pull_request }}
-    uses: ./.github/workflows/test-all.yaml
-    with:
-      OS: macOS
-      SKU: macOS
-      Test-Clang: Off
-      TestTarget: check-hlsl-mtl
-      HLSLTest-branch: ${{ github.event.pull_request.head.sha }}
   macOS-Metal-DXC:
-    if: ${{ !github.event.issue.pull_request }}
     uses: ./.github/workflows/test-all.yaml
     with:
       OS: macOS
       SKU: macOS
       Test-Clang: Off
       TestTarget: check-hlsl-mtl
+      HLSLTest-branch: ${{ github.ref }}
