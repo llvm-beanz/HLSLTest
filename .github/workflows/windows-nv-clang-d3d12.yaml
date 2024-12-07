@@ -6,7 +6,8 @@ permissions:
 
 on:
   schedule:
-    - cron: '*/30 0-12 * * *' # run every 30 minutes overnight
+    - cron: '*/30 0-12 * * 1-5' # run every 30 minutes overnight
+    - cron: '*/30 * * * 6-7' # run every 30 minutes on weekends
 
 jobs:
   Windows-D3D12-NVIDIA-Clang:
