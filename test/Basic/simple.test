@@ -40,7 +40,6 @@ DescriptorSets:
 # RUN: %if DirectX %{ %offloader %t/simple.yaml %t.dxil | FileCheck %s %}
 # RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -fspv-target-env=vulkan1.1 -Fo %t.spv %t/simple.hlsl %}
 # RUN: %if Vulkan %{ %offloader %t/simple.yaml %t.spv | FileCheck %s %}
-# XFAIL: Vulkan-NV
 
 # RUN: %if Metal %{ dxc -T cs_6_0 -Fo %t.dxil %t/simple.hlsl %}
 # RUN: %if Metal %{ metal-shaderconverter %t.dxil -o=%t.metallib %}
