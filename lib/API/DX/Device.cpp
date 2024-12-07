@@ -27,7 +27,6 @@
 #include "HLSLTest/API/Pipeline.h"
 #include "HLSLTest/WinError.h"
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 
@@ -83,11 +82,6 @@ private:
   };
 
   struct InvocationState {
-    // Resource references need to be the last things cleaned up, so put them at
-    // the top.
-    using Binding = std::pair<uint32_t, uint32_t>;
-    llvm::DenseMap<Binding, UAVResourceSet> Outputs;
-
     CComPtr<ID3D12RootSignature> RootSig;
     CComPtr<ID3D12DescriptorHeap> DescHeap;
     CComPtr<ID3D12PipelineState> PSO;
@@ -96,6 +90,7 @@ private:
     CComPtr<ID3D12GraphicsCommandList> CmdList;
     CComPtr<ID3D12Fence> Fence;
     HANDLE Event;
+    llvm::SmallVector<UAVResourceSet> Resources;
   };
 
 public:
@@ -388,10 +383,9 @@ public:
                                    D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     Device->CreateUnorderedAccessView(Buffer, nullptr, &UAVDesc, UAVHandle);
 
-    std::pair<uint32_t, uint32_t> Binding = {R.DXBinding.Register,
-                                             R.DXBinding.Space};
     UAVResourceSet Resources = {UploadBuffer, Buffer, ReadBackBuffer};
-    IS.Outputs.insert(std::make_pair(Binding, Resources));
+    IS.Resources.push_back(Resources);
+
     return llvm::Error::success();
   }
 
@@ -526,31 +520,31 @@ public:
     IS.CmdList->Dispatch(P.DispatchSize[0], P.DispatchSize[1],
                          P.DispatchSize[2]);
 
-    for (auto &Out : IS.Outputs) {
-      addReadbackBeginBarrier(IS, Out.second.Buffer);
-      IS.CmdList->CopyResource(Out.second.Readback, Out.second.Buffer);
-      addReadbackEndBarrier(IS, Out.second.Buffer);
+    for (auto &Out : IS.Resources) {
+      addReadbackBeginBarrier(IS, Out.Buffer);
+      IS.CmdList->CopyResource(Out.Readback, Out.Buffer);
+      addReadbackEndBarrier(IS, Out.Buffer);
     }
   }
 
   llvm::Error readBack(Pipeline &P, InvocationState &IS) {
+    auto ResourcesIterator = IS.Resources.begin();
     for (auto &S : P.Sets) {
       for (auto &R : S.Resources) {
-        if (R.Access != DataAccess::ReadWrite)
-          continue;
-        auto ResourcePair = IS.Outputs.find(
-            std::make_pair(R.DXBinding.Register, R.DXBinding.Space));
-        if (ResourcePair == IS.Outputs.end())
-          return llvm::createStringError(std::errc::no_such_device_or_address,
-                                         "Failed to find binding.");
-
-        void *DataPtr;
-        if (auto Err = HR::toError(
-                ResourcePair->second.Readback->Map(0, nullptr, &DataPtr),
-                "Failed to map result."))
-          return Err;
-        memcpy(R.Data.get(), DataPtr, R.Size);
-        ResourcePair->second.Readback->Unmap(0, nullptr);
+        if (ResourcesIterator == IS.Resources.end())
+          return llvm::createStringError(
+              std::errc::no_such_device_or_address,
+              "Internal error: created resources doesn't match pipeline");
+        if (R.Access == DataAccess::ReadWrite) {
+          void *DataPtr;
+          if (auto Err = HR::toError(
+                  ResourcesIterator->Readback->Map(0, nullptr, &DataPtr),
+                  "Failed to map result."))
+            return Err;
+          memcpy(R.Data.get(), DataPtr, R.Size);
+          ResourcesIterator->Readback->Unmap(0, nullptr);
+        }
+        ++ResourcesIterator;
       }
     }
     return llvm::Error::success();
