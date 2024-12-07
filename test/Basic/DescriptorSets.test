@@ -47,14 +47,14 @@ DescriptorSets:
 
 # RUN: split-file %s %t
 # RUN: %if DirectX %{ dxc -T cs_6_0 -Fo %t.dxil %t/DescriptorSets.hlsl %}
-# RUN: %if DirectX %{ %gpu-exec %t/DescriptorSets.yaml %t.dxil | FileCheck %s %}
+# RUN: %if DirectX %{ %offloader %t/DescriptorSets.yaml %t.dxil | FileCheck %s %}
 # RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -fspv-target-env=vulkan1.1 -Fo %t.spv %t/DescriptorSets.hlsl %}
-# RUN: %if Vulkan %{ %gpu-exec %t/DescriptorSets.yaml %t.spv | FileCheck %s %}
+# RUN: %if Vulkan %{ %offloader %t/DescriptorSets.yaml %t.spv | FileCheck %s %}
 # XFAIL: Vulkan-NV
 
 # RUN: %if Metal %{ dxc -T cs_6_0 -Fo %t.dxil %t/DescriptorSets.hlsl %}
 # RUN: %if Metal %{ metal-shaderconverter %t.dxil -o=%t.metallib %}
-# RUN: %if Metal %{ %gpu-exec %t/DescriptorSets.yaml %t.metallib | FileCheck %s %}
+# RUN: %if Metal %{ %offloader %t/DescriptorSets.yaml %t.metallib | FileCheck %s %}
 
 # CHECK: Data:
 # CHECK: Data: [ 4, 16, 36, 64 ]
