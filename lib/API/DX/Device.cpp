@@ -513,16 +513,13 @@ public:
 
     uint32_t Inc = Device->GetDescriptorHandleIncrementSize(
         D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    CD3DX12_GPU_DESCRIPTOR_HANDLE Handle{IS.DescHeap->GetGPUDescriptorHandleForHeapStart()};
 
-    uint32_t Offset = 0;
-    for (uint32_t Idx = 0; Idx < P.Sets.size(); ++Idx, Offset += Inc) {
-      D3D12_GPU_DESCRIPTOR_HANDLE Handle =
-          IS.DescHeap->GetGPUDescriptorHandleForHeapStart();
-      Handle.ptr += Offset;
+    for (uint32_t Idx = 0; Idx < P.Sets.size(); ++Idx) {
       IS.CmdList->SetComputeRootDescriptorTable(Idx, Handle);
-      // TODO: This probably computes the wrong offsets if I have multiple
-      // descriptor tables in use.
+      Handle.Offset(P.Sets[Idx].Resources.size(), Inc);
     }
+
     IS.CmdList->Dispatch(P.DispatchSize[0], P.DispatchSize[1],
                          P.DispatchSize[2]);
 
