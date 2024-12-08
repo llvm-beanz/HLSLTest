@@ -73,7 +73,6 @@ class DXDevice : public hlsltest::Device {
 private:
   CComPtr<IDXGIAdapter1> Adapter;
   CComPtr<ID3D12Device> Device;
-  CComPtr<ID3D12InfoQueue> InfoQueue;
   Capabilities Caps;
 
   struct UAVResourceSet {
@@ -123,6 +122,8 @@ public:
     if (auto Err = HR::toError(Adapter->GetDesc1(&Desc),
                                "Failed to get device description"))
       return Err;
+    if (auto Err = configureInfoQueue(Device))
+      return Err;
     return DXDevice(Adapter, Device, Desc);
   }
 
@@ -152,9 +153,10 @@ public:
 #include "DXFeatures.def"
   }
 
-  llvm::Error initializeInfoQueue() {
+  static llvm::Error configureInfoQueue(ID3D12Device *Device) {
 #ifndef NDEBUG
-    if (auto Err = HR::toError(Device.QueryInterface(&InfoQueue),
+    CComPtr<ID3D12InfoQueue> InfoQueue;
+    if (auto Err = HR::toError(Device->QueryInterface(&InfoQueue),
                                "Error initializing info queue"))
       return Err;
     InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
@@ -557,8 +559,6 @@ public:
   }
 
   llvm::Error executeProgram(llvm::StringRef Program, Pipeline &P) override {
-    if (auto Err = initializeInfoQueue())
-      return Err;
     InvocationState State;
     llvm::outs() << "Configuring execution on device: " << Description << "\n";
     if (auto Err = createRootSignature(P, State))
