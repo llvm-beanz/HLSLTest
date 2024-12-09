@@ -1,0 +1,61 @@
+#--- DescriptorSets.hlsl
+
+#if defined(__spirv__) || defined(__SPIRV__)
+#define REGISTER(Idx, Space)
+#else
+#define REGISTER(Idx, Space) : register(Idx, Space)
+#endif
+
+[[vk::binding(0)]] RWBuffer<float4> In REGISTER(u0, space0);
+[[vk::binding(1)]] RWBuffer<float4> Out1 REGISTER(u1, space4);
+[[vk::binding(0,1)]] RWBuffer<float4> Out2 REGISTER(u2, space4);
+
+[numthreads(1,1,1)]
+void main(uint GI : SV_GroupIndex) {
+  Out1[GI] = In[GI] * In[GI];
+  Out2[GI] = In[GI] * In[GI] * In[GI];
+}
+//--- DescriptorSets.yaml
+---
+DispatchSize: [1, 1, 1]
+DescriptorSets:
+  - Resources:
+    - Access: ReadWrite
+      Format: Float32
+      Channels: 4
+      Data: [ 2, 4, 6, 8]
+      DirectXBinding:
+        Register: 0
+        Space: 0
+    - Access: ReadWrite
+      Format: Float32
+      Channels: 4
+      ZeroInitSize: 16
+      DirectXBinding:
+        Register: 1
+        Space: 4
+  - Resources:
+    - Access: ReadWrite
+      Format: Float32
+      Channels: 4
+      ZeroInitSize: 16
+      DirectXBinding:
+        Register: 2
+        Space: 4
+...
+#--- end
+
+# UNSUPPORTED: Clang
+# RUN: split-file %s %t
+# RUN: %if DirectX %{ dxc -T cs_6_0 -Fo %t.dxil %t/DescriptorSets.hlsl %}
+# RUN: %if DirectX %{ %offloader %t/DescriptorSets.yaml %t.dxil | FileCheck %s %}
+# RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -fspv-target-env=vulkan1.1 -Fo %t.spv %t/DescriptorSets.hlsl %}
+# RUN: %if Vulkan %{ %offloader %t/DescriptorSets.yaml %t.spv | FileCheck %s %}
+
+# RUN: %if Metal %{ dxc -T cs_6_0 -Fo %t.dxil %t/DescriptorSets.hlsl %}
+# RUN: %if Metal %{ metal-shaderconverter %t.dxil -o=%t.metallib %}
+# RUN: %if Metal %{ %offloader %t/DescriptorSets.yaml %t.metallib | FileCheck %s %}
+
+# CHECK: Data:
+# CHECK: Data: [ 4, 16, 36, 64 ]
+# CHECK: Data: [ 8, 64, 216, 512 ]
