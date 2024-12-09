@@ -588,68 +588,40 @@ public:
     return llvm::Error::success();
   }
 };
-
-class DirectXContext {
-private:
-  CComPtr<IDXGIFactory2> Factory;
-  CComPtr<ID3D12Debug> Debug;
-  CComPtr<ID3D12Debug1> Debug1; // I hate this name!
-  llvm::SmallVector<std::shared_ptr<DXDevice>> Devices;
-
-  DirectXContext() = default;
-  ~DirectXContext() = default;
-
-public:
-  llvm::Error initialize() {
-
-#ifndef NDEBUG
-    if (auto Err = HR::toError(D3D12GetDebugInterface(IID_PPV_ARGS(&Debug)),
-                               "failed to create D3D12 Debug Interface"))
-      return Err;
-
-    if (auto Err = HR::toError(Debug->QueryInterface(IID_PPV_ARGS(&Debug1)),
-                               "Failed to queryy Debug interface"))
-      return Err;
-    Debug->EnableDebugLayer();
-    Debug1->SetEnableGPUBasedValidation(true);
-#endif
-
-    if (auto Err = HR::toError(CreateDXGIFactory2(0, IID_PPV_ARGS(&Factory)),
-                               "Failed to create DXGI Factory")) {
-      return Err;
-    }
-    for (unsigned AdapterIndex = 0;;) {
-      CComPtr<IDXGIAdapter1> Adapter;
-
-      HRESULT HR = Factory->EnumAdapters1(AdapterIndex++, &Adapter);
-
-      if (DXGI_ERROR_NOT_FOUND == HR)
-        return llvm::Error::success();
-
-      if (auto Err = HR::toError(HR, ""))
-        return Err;
-      auto ExDevice = DXDevice::Create(Adapter);
-      if (!ExDevice)
-        return ExDevice.takeError();
-      auto ShPtr = std::make_shared<DXDevice>(*ExDevice);
-      Devices.push_back(ShPtr);
-      Device::registerDevice(std::static_pointer_cast<Device>(ShPtr));
-    }
-    return llvm::Error::success();
-  }
-
-  using iterator = llvm::SmallVector<std::shared_ptr<DXDevice>>::iterator;
-
-  iterator begin() { return Devices.begin(); }
-  iterator end() { return Devices.end(); }
-
-  static DirectXContext &Instance() {
-    static DirectXContext Ctx;
-    return Ctx;
-  }
-};
 } // namespace
 
 llvm::Error InitializeDXDevices() {
-  return DirectXContext::Instance().initialize();
+#ifndef NDEBUG
+  CComPtr<ID3D12Debug1> Debug1;
+
+  if (auto Err = HR::toError(D3D12GetDebugInterface(IID_PPV_ARGS(&Debug1)),
+                             "failed to create D3D12 Debug Interface"))
+    return Err;
+
+  Debug1->EnableDebugLayer();
+  Debug1->SetEnableGPUBasedValidation(true);
+#endif
+
+  CComPtr<IDXGIFactory2> Factory;
+  if (auto Err = HR::toError(CreateDXGIFactory2(0, IID_PPV_ARGS(&Factory)),
+                             "Failed to create DXGI Factory")) {
+    return Err;
+  }
+  for (unsigned AdapterIndex = 0;;) {
+    CComPtr<IDXGIAdapter1> Adapter;
+
+    HRESULT HR = Factory->EnumAdapters1(AdapterIndex++, &Adapter);
+
+    if (DXGI_ERROR_NOT_FOUND == HR)
+      return llvm::Error::success();
+
+    if (auto Err = HR::toError(HR, ""))
+      return Err;
+    auto ExDevice = DXDevice::Create(Adapter);
+    if (!ExDevice)
+      return ExDevice.takeError();
+    auto ShPtr = std::make_shared<DXDevice>(*ExDevice);
+    Device::registerDevice(std::static_pointer_cast<Device>(ShPtr));
+  }
+  return llvm::Error::success();
 }
