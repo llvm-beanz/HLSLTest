@@ -18,3 +18,4 @@ jobs:
       SKU: GPU-NV
       Test-Clang: On
       TestTarget: check-hlsl-clang-d3d12
+      LLVM-ExtraCMakeArgs: -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl

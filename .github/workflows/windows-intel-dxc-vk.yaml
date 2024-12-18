@@ -23,3 +23,4 @@ jobs:
       BuildType: Debug
       TestTarget: check-hlsl-vk
       HLSLTest-branch: ${{ github.ref }}
+      LLVM-ExtraCMakeArgs: -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl

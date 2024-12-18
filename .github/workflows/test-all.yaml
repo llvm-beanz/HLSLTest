@@ -28,7 +28,7 @@ on:
         default: 'main'
         type: string
       BuildType:
-        description: 'DXC Branch'
+        description: 'Build Type'
         required: false
         default: 'Release'
         type: choice
