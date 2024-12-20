@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <memory>
+#include <string>
 
 namespace hlsltest {
 
@@ -43,6 +44,13 @@ struct DirectXBinding {
   uint32_t Space;
 };
 
+struct OutputProperties {
+  std::string Name;
+  int Height;
+  int Width;
+  int Depth;
+};
+
 struct Resource {
   DataFormat Format;
   int Channels;
@@ -51,6 +59,7 @@ struct Resource {
   size_t Size;
   std::unique_ptr<char[]> Data;
   DirectXBinding DXBinding;
+  OutputProperties OutputProps;
 
   bool isRaw() const {
     return RawSize > 0;
@@ -122,6 +131,10 @@ template <> struct MappingTraits<hlsltest::Resource> {
 
 template <> struct MappingTraits<hlsltest::DirectXBinding> {
   static void mapping(IO &I, hlsltest::DirectXBinding &B);
+};
+
+template <> struct MappingTraits<hlsltest::OutputProperties> {
+  static void mapping(IO &I, hlsltest::OutputProperties &P);
 };
 
 template <> struct ScalarEnumerationTraits<hlsltest::DataFormat> {

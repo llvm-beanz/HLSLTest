@@ -64,17 +64,23 @@ DescriptorSets:
       DirectXBinding:
         Register: 0
         Space: 0
+      OutputProps:
+        Name: Output
+        Height: 4096
+        Width: 4096
+        Depth: 16
 ...
 #--- end
 
-# REQUIRES: imagediff
 # this test doesn't yet do anything... so we should skip it.
 
+# REQUIRES: goldenimage
 # RUN: split-file %s %t
 # RUN: %if DirectX %{ dxc -T cs_6_0 -Fo %t.dxil %t/source.hlsl %}
-# RUN: %if DirectX %{ %offloader %t/pipeline.yaml %t.dxil | FileCheck %s %}
+# RUN: %if DirectX %{ %offloader %t/pipeline.yaml %t.dxil -r Output -o %t/output.png %}
 # RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -Fo %t.spv %t/source.hlsl %}
-# RUN: %if Vulkan %{ %offloader %t/pipeline.yaml %t.spv | FileCheck %s %}
+# RUN: %if Vulkan %{ %offloader %t/pipeline.yaml %t.spv -r Output -o %t/output.png %}
 # RUN: %if Metal %{ dxc -T cs_6_0 -Fo %t.dxil %t/source.hlsl %}
 # RUN: %if Metal %{ metal-shaderconverter %t.dxil -o=%t.metallib %}
-# RUN: %if Metal %{ %offloader %t/pipeline.yaml %t.metallib | FileCheck %s %}
+# RUN: %if Metal %{ %offloader %t/pipeline.yaml %t.metallib -r Output -o %t/output.png %}
+# RUN: cmp %t/output.png %goldenimage_dir/hlsl/Basic/Mandelbrot.png

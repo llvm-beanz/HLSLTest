@@ -69,13 +69,23 @@ void MappingTraits<hlsltest::Resource>::mapping(IO &I, hlsltest::Resource &R) {
     DATA_CASE(Float32, float)
     DATA_CASE(Float64, double)
   }
+
   I.mapRequired("DirectXBinding", R.DXBinding);
+  I.mapOptional("OutputProps", R.OutputProps);
 }
 
 void MappingTraits<hlsltest::DirectXBinding>::mapping(
     IO &I, hlsltest::DirectXBinding &B) {
   I.mapRequired("Register", B.Register);
   I.mapRequired("Space", B.Space);
+}
+
+void MappingTraits<hlsltest::OutputProperties>::mapping(
+    IO &I, hlsltest::OutputProperties &P) {
+  I.mapRequired("Name", P.Name);
+  I.mapRequired("Height", P.Height);
+  I.mapRequired("Width", P.Width);
+  I.mapRequired("Depth", P.Depth);
 }
 } // namespace yaml
 } // namespace llvm

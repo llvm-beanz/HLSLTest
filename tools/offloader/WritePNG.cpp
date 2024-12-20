@@ -13,30 +13,46 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/SwapByteOrder.h"
 
+#include <limits.h>
 #include <png.h>
 #include <stdio.h>
 
 using namespace hlsltest;
 
+template <typename DstType, typename SrcType>
+void TranslatePixelData(DstType *Dst, const SrcType *Src, uint64_t Count) {
+  for (uint64_t I = 0; I < Count; ++I, ++Src, ++Dst) {
+    SrcType Val = *Src;
+    Val *= std::numeric_limits<DstType>::max();
+    *Dst = static_cast<DstType>(Val);
+    if (sizeof(DstType) > 1 && !llvm::sys::IsBigEndianHost)
+      llvm::sys::swapByteOrder(*Dst);
+  }
+}
+
 llvm::Error WritePNG(llvm::StringRef OutputPath, const Resource &R) {
-  // TODO: Fixme
-  int Height = 4096;
-  int Width = 4096;
+  int Height = R.OutputProps.Height;
+  int Width = R.OutputProps.Width;
+  int Depth = R.OutputProps.Depth;
+  assert(Depth == 16 || Depth == 8 && "Color depth should be 8 or 16 bits.");
   // Translate pixel data into uint8_t.
   uint64_t Stride = R.getSingleElementSize();
   uint64_t PixelComponents = R.Size / Stride;
   std::unique_ptr<uint8_t[]> PixelData =
-      std::make_unique<uint8_t[]>(PixelComponents);
+      std::make_unique<uint8_t[]>(PixelComponents * (Depth / 8));
 
-  const uint8_t *Src = reinterpret_cast<const uint8_t *>(R.Data.get());
   switch (R.Format) {
   case DataFormat::Float32:
-    for (uint64_t I = 0; I < PixelComponents; ++I, Src += Stride) {
-      float Val = *reinterpret_cast<const float *>(Src);
-      Val *= 255.f;
-      PixelData[I] = static_cast<uint8_t>(Val);
-    }
+    if (Depth == 16)
+      TranslatePixelData(reinterpret_cast<uint16_t *>(PixelData.get()),
+                         reinterpret_cast<const float *>(R.Data.get()),
+                         PixelComponents);
+    else
+      TranslatePixelData(reinterpret_cast<uint8_t *>(PixelData.get()),
+                         reinterpret_cast<const float *>(R.Data.get()),
+                         PixelComponents);
     break;
   default:
     llvm_unreachable("Unsupported format for png output");
@@ -63,7 +79,7 @@ llvm::Error WritePNG(llvm::StringRef OutputPath, const Resource &R) {
   if (!F)
     return llvm::createStringError(std::errc::io_error, "Failed openiong file");
   png_init_io(PNG, F);
-  png_set_IHDR(PNG, PNGInfo, Width, Height, 8, PNG_COLOR_TYPE_RGB_ALPHA,
+  png_set_IHDR(PNG, PNGInfo, Width, Height, Depth, PNG_COLOR_TYPE_RGB_ALPHA,
                PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE,
                PNG_FILTER_TYPE_BASE);
   png_colorp ColorP =
@@ -76,9 +92,10 @@ llvm::Error WritePNG(llvm::StringRef OutputPath, const Resource &R) {
   png_set_packing(PNG);
 
   png_bytepp Rows = (png_bytepp)png_malloc(PNG, Height * sizeof(png_bytep));
-  uint64_t RowSize = Width * R.Channels;
+  uint64_t DepthBytes = Depth / 8;
+  uint64_t RowSize = Width * R.Channels * DepthBytes;
   // Step one row back from the end
-  uint8_t *Row = PixelData.get() + PixelComponents - RowSize;
+  uint8_t *Row = PixelData.get() + (PixelComponents * DepthBytes) - RowSize;
   for (int I = 0; I < Height; ++I, Row -= RowSize)
     Rows[I] = (png_bytep)Row;
 

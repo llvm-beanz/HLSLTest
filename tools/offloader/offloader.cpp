@@ -44,16 +44,14 @@ static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"),
                                            cl::init("-"));
 
-static cl::opt<std::string> ImageOutput("r",
-                                        cl::desc("Resource index to output"),
-                                        cl::value_desc("set,resource"),
-                                        cl::init(""));
+static cl::opt<std::string>
+    ImageOutput("r", cl::desc("Resource name to output as png"),
+                cl::value_desc("<name>"), cl::init(""));
 
 static cl::opt<bool>
     Quiet("quiet", cl::desc("Suppress printing the pipeline as output"));
 
-static cl::opt<bool>
-    UseWarp("warp", cl::desc("Use warp"));
+static cl::opt<bool> UseWarp("warp", cl::desc("Use warp"));
 
 llvm::Error WritePNG(llvm::StringRef, const Resource &);
 
@@ -101,9 +99,8 @@ int run() {
   }
 
   if (UseWarp && APIToUse != GPUAPI::DirectX)
-    ExitOnErr(
-        createStringError(std::errc::executable_format_error,
-                          "WARP required DirectX API"));
+    ExitOnErr(createStringError(std::errc::executable_format_error,
+                                "WARP required DirectX API"));
 
   if (APIToUse == GPUAPI::Unknown)
     ExitOnErr(
@@ -139,28 +136,17 @@ int run() {
       Out->keep();
       return 0;
     }
-    llvm::Regex R("^([0-9]+),([0-9]+)$");
-    llvm::SmallVector<llvm::StringRef, 2> Matches;
-    if (!R.match(ImageOutput, &Matches))
-      ExitOnErr(
-          createStringError(std::errc::invalid_argument,
-                            "Image output argument must be specified as "
-                            "<set>,<resource> (e.g. \"0,1\", \"3,0\", etc)"));
-    uint64_t Set = 0, Resource = 0;
-    if (!to_integer(Matches[1], Set) || !to_integer(Matches[2], Resource))
-      ExitOnErr(
-          createStringError(std::errc::invalid_argument,
-                            "Image output argument must be specified as "
-                            "<set>,<resource> (e.g. \"0,1\", \"3,0\", etc)"));
-    if (Set >= PipelineDesc.Sets.size())
-      ExitOnErr(createStringError(std::errc::invalid_argument,
-                                  "Specified descriptor set out of range"));
-    if (Resource >= PipelineDesc.Sets[Set].Resources.size())
-      ExitOnErr(createStringError(std::errc::invalid_argument,
-                                  "Specified descriptor index out of range"));
+    for (const auto &S : PipelineDesc.Sets) {
+      for (const auto &R : S.Resources) {
+        if (R.OutputProps.Name == ImageOutput) {
+          ExitOnErr(WritePNG(OutputFilename, R));
+          return 0;
+        }
+      }
+    }
+
     ExitOnErr(
-        WritePNG(OutputFilename, PipelineDesc.Sets[Set].Resources[Resource]));
-    return 0;
+        createStringError(Twine("No descriptor with name ") + ImageOutput));
   }
   return 1;
 }
