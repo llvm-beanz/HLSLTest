@@ -10,6 +10,7 @@ config.hlsltest_supports_spirv = @SUPPORTS_SPIRV@
 config.hlsltest_test_clang = @FORCE_CLANG@
 config.hlsltest_test_warp = @FORCE_WARP@
 config.hlsltest_dxc_dir = r"@DXC_DIR@"
+config.goldenimage_dir = r"@GOLDENIMAGE_DIR@"
 
 config.hlsltest_suite = "@suite@"
 config.hlsltest_enable_d3d12 = @TEST_d3d12@

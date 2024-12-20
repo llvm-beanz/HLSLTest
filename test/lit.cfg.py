@@ -73,3 +73,7 @@ for device in devices['Devices']:
     config.available_features.add("Vulkan")
     if "NVIDIA" in device['Description']:
       config.available_features.add("Vulkan-NV")
+
+if os.path.exists(config.goldenimage_dir):
+  config.substitutions.append(("%goldenimage_dir", config.goldenimage_dir))
+  config.available_features.add("goldenimage")
