@@ -24,8 +24,8 @@
 #include "DXFeatures.h"
 #include "API/Capabilities.h"
 #include "API/Device.h"
-#include "API/Pipeline.h"
-#include "WinError.h"
+#include "Support/Pipeline.h"
+#include "Support/WinError.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
