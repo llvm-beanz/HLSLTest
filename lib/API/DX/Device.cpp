@@ -25,7 +25,7 @@
 #include "API/Capabilities.h"
 #include "API/Device.h"
 #include "Support/Pipeline.h"
-#include "WinError.h"
+#include "Support/WinError.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
