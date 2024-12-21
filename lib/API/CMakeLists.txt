@@ -23,12 +23,11 @@ endif()
 add_hlsl_library(API
   Capabilities.cpp
   Device.cpp
-  Pipeline.cpp
   ${api_sources})
 
 target_include_directories(HLSLTestAPI SYSTEM BEFORE ${api_headers})
 
-target_link_libraries(HLSLTestAPI INTERFACE ${api_libraries})
+target_link_libraries(HLSLTestAPI INTERFACE HLSLTestSupport ${api_libraries})
 if (TARGET DIRECTX_HEADERS)
   add_dependencies(HLSLTestAPI DIRECTX_HEADERS)
 endif()
