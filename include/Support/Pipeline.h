@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef HLSLTEST_SUPPORT_PIPELINE_H
+#define HLSLTEST_SUPPORT_PIPELINE_H
+
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -167,3 +170,5 @@ template <> struct ScalarEnumerationTraits<hlsltest::DataAccess> {
 };
 } // namespace yaml
 } // namespace llvm
+
+#endif // HLSLTEST_SUPPORT_PIPELINE_H

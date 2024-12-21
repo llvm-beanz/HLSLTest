@@ -7,6 +7,9 @@
 /*                                                                            */
 /*===----------------------------------------------------------------------===*/
 
+#ifndef HLSLTEST_CONFIG_H
+#define HLSLTEST_CONFIG_H
+
 /* Enable D3D12 Support */
 #cmakedefine HLSLTEST_ENABLE_D3D12
 
@@ -18,3 +21,5 @@
 
 /* If building for apple platforms */
 #cmakedefine01 APPLE
+
+#endif // HLSLTEST_CONFIG_H
