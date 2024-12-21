@@ -10,7 +10,7 @@
 #include "metal_irconverter_runtime.h"
 
 #include "API/Device.h"
-#include "API/Pipeline.h"
+#include "Support/Pipeline.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"

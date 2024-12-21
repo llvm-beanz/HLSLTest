@@ -9,7 +9,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "API/Pipeline.h"
+#include "Support/Pipeline.h"
+
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"

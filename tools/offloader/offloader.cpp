@@ -11,8 +11,9 @@
 
 #include "API/API.h"
 #include "API/Device.h"
-#include "API/Pipeline.h"
 #include "Config.h"
+#include "Support/Pipeline.h"
+
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"

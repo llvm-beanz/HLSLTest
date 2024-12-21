@@ -1,4 +1,4 @@
-//===- Pipeline.cpp - HLSL API Pipeline API -------------------------------===//
+//===- Pipeline.cpp - Support Pipeline API --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "API/Pipeline.h"
+#include "Support/Pipeline.h"
 
 using namespace hlsltest;
 
