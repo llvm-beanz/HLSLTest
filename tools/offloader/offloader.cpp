@@ -12,6 +12,7 @@
 #include "API/API.h"
 #include "API/Device.h"
 #include "Config.h"
+#include "Image/Image.h"
 #include "Support/Pipeline.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -53,8 +54,6 @@ static cl::opt<bool>
     Quiet("quiet", cl::desc("Suppress printing the pipeline as output"));
 
 static cl::opt<bool> UseWarp("warp", cl::desc("Use warp"));
-
-llvm::Error WritePNG(llvm::StringRef, const Resource &);
 
 std::unique_ptr<MemoryBuffer> readFile(const std::string &Path) {
   ExitOnError ExitOnErr("gpu-exec: error: ");
@@ -140,7 +139,8 @@ int run() {
     for (const auto &S : PipelineDesc.Sets) {
       for (const auto &R : S.Resources) {
         if (R.OutputProps.Name == ImageOutput) {
-          ExitOnErr(WritePNG(OutputFilename, R));
+          ImageRef Img = ImageRef(R);
+          ExitOnErr(Image::WritePNG(Img, OutputFilename));
           return 0;
         }
       }
