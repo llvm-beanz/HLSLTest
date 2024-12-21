@@ -64,8 +64,8 @@ if (NOT HLSLTEST_ENABLE_VULKAN AND NOT HLSLTEST_ENABLE_D3D12 AND NOT APPLE)
 endif ()
 
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/HLSLTest/Config.h.in
-  ${CMAKE_CURRENT_BINARY_DIR}/include/HLSLTest/Config.h)
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/Config.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/include/Config.h)
 
 set(DIRECTX_HEADERS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/third-party/DirectX-Headers)
 

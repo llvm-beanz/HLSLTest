@@ -12,8 +12,8 @@
 #ifndef HLSLTEST_API_DEVICE_H
 #define HLSLTEST_API_DEVICE_H
 
-#include "HLSLTest/API/API.h"
-#include "HLSLTest/API/Capabilities.h"
+#include "API/API.h"
+#include "API/Capabilities.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/StringRef.h"
 

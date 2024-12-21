@@ -9,7 +9,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "HLSLTest/API/Capabilities.h"
+#include "API/Capabilities.h"
 
 using namespace hlsltest;
 

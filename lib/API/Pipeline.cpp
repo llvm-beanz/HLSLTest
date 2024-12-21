@@ -9,7 +9,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "HLSLTest/API/Pipeline.h"
+#include "API/Pipeline.h"
 
 using namespace hlsltest;
 

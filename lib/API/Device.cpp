@@ -9,8 +9,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "HLSLTest/API/Device.h"
-#include "HLSLTest/Config.h"
+#include "API/Device.h"
+#include "Config.h"
 #include "llvm/Support/Error.h"
 
 using namespace hlsltest;

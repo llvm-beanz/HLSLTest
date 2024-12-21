@@ -9,8 +9,8 @@
 #define IR_PRIVATE_IMPLEMENTATION
 #include "metal_irconverter_runtime.h"
 
-#include "HLSLTest/API/Device.h"
-#include "HLSLTest/API/Pipeline.h"
+#include "API/Device.h"
+#include "API/Pipeline.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"

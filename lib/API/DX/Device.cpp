@@ -22,10 +22,10 @@
 #undef min
 
 #include "DXFeatures.h"
-#include "HLSLTest/API/Capabilities.h"
-#include "HLSLTest/API/Device.h"
-#include "HLSLTest/API/Pipeline.h"
-#include "HLSLTest/WinError.h"
+#include "API/Capabilities.h"
+#include "API/Device.h"
+#include "API/Pipeline.h"
+#include "WinError.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"

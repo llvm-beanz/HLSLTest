@@ -9,8 +9,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "HLSLTest/API/Device.h"
-#include "HLSLTest/API/Pipeline.h"
+#include "API/Device.h"
+#include "API/Pipeline.h"
 #include "llvm/Support/Error.h"
 
 #include <memory>

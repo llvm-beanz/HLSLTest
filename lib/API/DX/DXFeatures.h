@@ -12,7 +12,7 @@
 #ifndef HLSLTEST_API_DXFEATURES_H
 #define HLSLTEST_API_DXFEATURES_H
 
-#include "HLSLTest/API/Capabilities.h"
+#include "API/Capabilities.h"
 #include "llvm/ADT/ArrayRef.h"
 
 namespace llvm {

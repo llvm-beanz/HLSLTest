@@ -9,7 +9,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "HLSLTest/API/Pipeline.h"
+#include "API/Pipeline.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"

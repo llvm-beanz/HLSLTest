@@ -9,10 +9,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "HLSLTest/API/API.h"
-#include "HLSLTest/API/Device.h"
-#include "HLSLTest/API/Pipeline.h"
-#include "HLSLTest/Config.h"
+#include "API/API.h"
+#include "API/Device.h"
+#include "API/Pipeline.h"
+#include "Config.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
