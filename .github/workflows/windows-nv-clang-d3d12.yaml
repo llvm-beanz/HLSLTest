@@ -7,8 +7,8 @@ permissions:
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/30 0-12 * * 1-5' # run every 30 minutes overnight
-    - cron: '*/30 * * * 0,6' # run every 30 minutes on weekends
+    - cron: '0 0-12 * * 1-5' # run every 30 minutes overnight
+    - cron: '0 * * * 0,6' # run every 30 minutes on weekends
 
 jobs:
   Windows-D3D12-NVIDIA-Clang:
