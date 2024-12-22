@@ -49,7 +49,7 @@ DescriptorSets:
 # RUN: split-file %s %t
 # RUN: %if DirectX %{ dxc -T cs_6_0 -Fo %t.dxil %t/DescriptorSets.hlsl %}
 # RUN: %if DirectX %{ %offloader %t/DescriptorSets.yaml %t.dxil | FileCheck %s %}
-# RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -fspv-target-env=vulkan1.1 -Fo %t.spv %t/DescriptorSets.hlsl %}
+# RUN: %if Vulkan %{ dxc -T cs_6_0 -spirv -Fo %t.spv %t/DescriptorSets.hlsl %}
 # RUN: %if Vulkan %{ %offloader %t/DescriptorSets.yaml %t.spv | FileCheck %s %}
 
 # RUN: %if Metal %{ dxc -T cs_6_0 -Fo %t.dxil %t/DescriptorSets.hlsl %}
