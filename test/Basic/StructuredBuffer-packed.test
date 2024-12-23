@@ -1,20 +1,19 @@
 #--- source.hlsl
-struct S1 {
-  int4 i;
-  float4 f;
-};
-struct S2 {
-  float4 f;
-  int4 i;
+struct Doggo {
+  int3 Legs;
+  int TailState;
+  int2 Ears;
 };
 
-RWStructuredBuffer<S1> In : register(u0);
-RWStructuredBuffer<S2> Out : register(u1);
+RWStructuredBuffer<Doggo> Buf;
 
-[numthreads(1,1,1)]
+[numthreads(2,1,1)]
 void main(uint GI : SV_GroupIndex) {
-  Out[GI].f = In[GI].f;
-  Out[GI].i = In[GI].i;
+  Doggo Fido = Buf[GI];
+  if (Fido.TailState == 0) {
+    Fido.TailState = Fido.Legs.x + Fido.Legs.y + Fido.Legs.z;
+  }
+  Buf[GI] = Fido;
 }
 //--- pipeline.yaml
 ---
@@ -22,23 +21,16 @@ DispatchSize: [1, 1, 1]
 DescriptorSets:
   - Resources:
     - Access: ReadWrite
-      Format: Hex32
-      RawSize: 32
-      Data: [0x00000000, 0x00000001, 0x00000002, 0x00000003,
-             0x00000000, 0x3f800000, 0x40000000, 0x40400000]
+      Format: Int32
+      RawSize: 24
+      Data: [ 0, 1, 2, 0, 4, 0, 1, 2, 3, 0, 4, 0]
       DirectXBinding:
         Register: 0
-        Space: 0
-    - Access: ReadWrite
-      Format: Hex32
-      RawSize: 32
-      ZeroInitSize: 32
-      DirectXBinding:
-        Register: 1
         Space: 0
 ...
 #--- end
 
+# UNSUPPORTED: Clang
 # RUN: split-file %s %t
 # RUN: %if DirectX %{ dxc -T cs_6_0 -Fo %t.dxil %t/source.hlsl %}
 # RUN: %if DirectX %{ %offloader %t/pipeline.yaml %t.dxil | FileCheck %s %}
@@ -49,13 +41,5 @@ DescriptorSets:
 # RUN: %if Metal %{ metal-shaderconverter %t.dxil -o=%t.metallib %}
 # RUN: %if Metal %{ %offloader %t/pipeline.yaml %t.metallib | FileCheck %s %}
 
-# CHECK: Data: [
-# CHECK: 0x0,
-# CHECK: 0x3F800000,
-# CHECK: 0x40000000,
-# CHECK: 0x40400000,
-# CHECK: 0x0,
-# CHECK: 0x1,
-# CHECK: 0x2,
-# CHECK: 0x3
-# CHECK: ]
+
+# CHECK: Data: [ 0, 1, 2, 3, 4, 0, 1, 2, 3, 6, 4, 0 ]
