@@ -37,7 +37,7 @@ macro(add_hlsl_tool name)
 endmacro()
 
 macro(add_hlsl_library name)
-  add_llvm_library(HLSLTest${name} ${ARGN})
+  add_llvm_library(HLSLTest${name} BUILDTREE_ONLY ${ARGN})
   set_target_properties(HLSLTest${name} PROPERTIES FOLDER "HLSL Test/Libraries")
 endmacro()
 
@@ -75,6 +75,7 @@ if (WIN32)
   # These are some extra fun hacks becauze ZLIB's CMake is fragile
   if (NOT TARGET ZLIB::ZLIB)
     add_library(ZLIB::ZLIB ALIAS zlibstatic)
+    set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS_BUILDTREE_ONLY zlibstatic)
   endif ()
   # libpng does some crazy stuff with zlib's include directories.
   set(ZLIB_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third-party/zlib
@@ -86,6 +87,7 @@ if (WIN32)
   set(SKIP_INSTALL_EXPORT On)
 endif ()
 add_subdirectory(third-party/libpng)
+set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS_BUILDTREE_ONLY png_static)
 
 include(Warp)
 
