@@ -157,7 +157,7 @@ llvm::Error WritePNGImpl(ImageRef Img, llvm::StringRef OutputPath) {
 }
 
 llvm::Error Image::WritePNG(ImageRef Img, llvm::StringRef Path) {
-  uint32_t NewDepth = std::min(Img.getDepth(), 2);
+  uint32_t NewDepth = std::min(static_cast<uint32_t>(Img.getDepth()), 2u);
   if (Img.isFloat() || Img.getDepth() != NewDepth) {
     Image Translated = translateImage(Img, NewDepth, Img.getChannels(), false);
     return WritePNGImpl(Translated, Path);
