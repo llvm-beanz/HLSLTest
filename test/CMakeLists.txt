@@ -58,7 +58,8 @@ list(APPEND HLSLTEST_DEPS
   api-query
   offloader
   FileCheck
-  split-file)
+  split-file
+  HLSLTestUnit)
 
 if (HLSLTEST_TEST_CLANG)
   list(APPEND HLSLTEST_DEPS clang)
