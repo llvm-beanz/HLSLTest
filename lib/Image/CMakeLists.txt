@@ -1,4 +1,4 @@
-add_hlsl_library(Image Image.cpp)
+add_hlsl_library(Image Color.cpp Image.cpp)
 
 target_include_directories(HLSLTestImage PRIVATE SYSTEM BEFORE
                            "${HLSLTEST_BINARY_DIR}/third-party/libpng/"
