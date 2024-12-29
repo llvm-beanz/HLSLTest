@@ -10,7 +10,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Image/Color.h"
-#include "Support/FloatingPointHelpers.h"
 
 #include "llvm/Support/raw_ostream.h"
 
