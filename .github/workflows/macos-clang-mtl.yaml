@@ -9,6 +9,10 @@ on:
   schedule:
     - cron: '*/30 * * * *' # run every 30 minutes
 
+  pull_request:
+    branches:
+      - main
+
 jobs:
   macOS-Metal-Clang:
     uses: ./.github/workflows/test-all.yaml
@@ -17,3 +21,4 @@ jobs:
       SKU: macOS
       Test-Clang: On
       TestTarget: check-hlsl-clang-mtl
+      HLSLTest-branch: ${{ github.ref }}

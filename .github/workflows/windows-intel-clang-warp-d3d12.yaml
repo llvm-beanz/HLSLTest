@@ -9,6 +9,10 @@ on:
   schedule:
     - cron: '0 * * * *' # run every 30 minutes
 
+  pull_request:
+    branches:
+      - main
+
 jobs:
   Windows-D3D12-Warp-Clang:
     uses: ./.github/workflows/test-all.yaml
@@ -17,4 +21,5 @@ jobs:
       SKU: GPU-Intel
       Test-Clang: On
       TestTarget: check-hlsl-clang-warp-d3d12
+      HLSLTest-branch: ${{ github.ref }}
       LLVM-ExtraCMakeArgs: -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl
