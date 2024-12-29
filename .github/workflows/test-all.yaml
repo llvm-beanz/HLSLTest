@@ -160,6 +160,7 @@ jobs:
         run: |
             cd llvm-project
             cd build
+            ninja check-hlsl-unit
             ninja ${{ inputs.TestTarget }}
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action/macos@v2

@@ -58,7 +58,8 @@ list(APPEND HLSLTEST_DEPS
   api-query
   offloader
   FileCheck
-  split-file)
+  split-file
+  HLSLTestUnit)
 
 if (HLSLTEST_TEST_CLANG)
   list(APPEND HLSLTEST_DEPS clang)
@@ -117,7 +118,7 @@ function(add_hlsltest_lit_suite suite)
     "LLVM_TOOLS_DIR"
     )
 
-    add_lit_testsuite(check-hlsl-${suite}
+  add_lit_testsuite(check-hlsl-${suite}
     "Running the HLSL regression tests for ${suite}"
     ${CMAKE_CURRENT_BINARY_DIR}/${suite}
     DEPENDS ${HLSLTEST_DEPS}
@@ -131,6 +132,23 @@ function(add_hlsltest_lit_suite suite)
 endfunction()
 
 umbrella_lit_testsuite_begin(check-hlsl)
+
+# Add unit test suite
+configure_lit_site_cfg(
+    ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+    ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
+    MAIN_CONFIG
+    ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.cfg.py
+    PATHS
+    "HLSLTEST_BINARY_DIR"
+    "LLVM_TOOLS_DIR"
+    )
+add_lit_testsuite(check-hlsl-unit
+    "Running the offload test unit test suite"
+    ${CMAKE_CURRENT_BINARY_DIR}/Unit
+    DEPENDS ${HLSLTEST_DEPS}
+    )
+set_target_properties(check-hlsl-unit PROPERTIES FOLDER "HLSL tests")
 
 if (NOT HLSLTEST_WARP_ONLY)
   foreach(platform ${platforms_to_test})
