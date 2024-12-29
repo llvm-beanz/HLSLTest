@@ -22,19 +22,12 @@ public:
     LAB
   };
 
-  union {
-    struct {
-      double X, Y, Z;
-    };
-    struct {
-      double R, G, B;
-    };
-  };
+  double R, G, B;
 
   Space ColorSpace;
 
   constexpr Color(double Rx, double Gy, double Bz, Space CS = RGB)
-      : X(Rx), Y(Gy), Z(Bz), ColorSpace(CS) {}
+      : R(Rx), G(Gy), B(Bz), ColorSpace(CS) {}
   Color() = delete;
   Color(const Color &) = default;
   Color(Color &&) = default;

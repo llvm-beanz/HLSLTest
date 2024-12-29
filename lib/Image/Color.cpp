@@ -19,9 +19,9 @@ constexpr Color D65WhitePoint = Color(95.047, 100.000, 108.883, Color::XYZ);
 
 static Color multiply(const Color LHS, double Mat[9], Color::Space NewSpace) {
   double X, Y, Z;
-  X = (LHS.X * Mat[0]) + (LHS.Y * Mat[1]) + (LHS.Z * Mat[2]);
-  Y = (LHS.X * Mat[3]) + (LHS.Y * Mat[4]) + (LHS.Z * Mat[5]);
-  Z = (LHS.X * Mat[6]) + (LHS.Y * Mat[7]) + (LHS.Z * Mat[8]);
+  X = (LHS.R * Mat[0]) + (LHS.G * Mat[1]) + (LHS.B * Mat[2]);
+  Y = (LHS.R * Mat[3]) + (LHS.G * Mat[4]) + (LHS.B * Mat[5]);
+  Z = (LHS.R * Mat[6]) + (LHS.G * Mat[7]) + (LHS.B * Mat[8]);
   return Color(X, Y, Z, NewSpace);
 }
 
@@ -48,9 +48,9 @@ static double convertXYZ(double Val) {
 }
 
 static Color XYZToLAB(const Color Old) {
-  double X = convertXYZ(Old.X / D65WhitePoint.X);
-  double Y = convertXYZ(Old.Y / D65WhitePoint.Y);
-  double Z = convertXYZ(Old.Z / D65WhitePoint.Z);
+  double X = convertXYZ(Old.R / D65WhitePoint.R);
+  double Y = convertXYZ(Old.G / D65WhitePoint.G);
+  double Z = convertXYZ(Old.B / D65WhitePoint.B);
 
   double L = fmax(0.0, 116.0 * Y - 16.0);
   double A = 500 * (X - Y);
@@ -69,13 +69,13 @@ static double convertLAB(double Val) {
 }
 
 static Color LABToXYZ(const Color Old) {
-  double Y = (Old.X + 16) / 116;
-  double X = Old.Y / 500 + Y;
-  double Z = Y - Old.Z / 200;
+  double Y = (Old.R + 16) / 116;
+  double X = Old.G / 500 + Y;
+  double Z = Y - Old.B / 200;
 
-  X = convertLAB(X) * D65WhitePoint.X;
-  Y = convertLAB(Y) * D65WhitePoint.Y;
-  Z = convertLAB(Z) * D65WhitePoint.Z;
+  X = convertLAB(X) * D65WhitePoint.R;
+  Y = convertLAB(Y) * D65WhitePoint.G;
+  Z = convertLAB(Z) * D65WhitePoint.B;
 
   return Color(X, Y, Z, Color::XYZ);
 }

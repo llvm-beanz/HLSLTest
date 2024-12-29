@@ -36,24 +36,23 @@ TEST(ColorTests, RoundTrip) {
 
     Color XYZPrime = LAB.translateSpace(Color::XYZ);
     Color RGBPrime = LAB.translateSpace(Color::RGB);
-    const int ULPS = 1000;
 
     // The floating point rounding errors across these transformations are
     // significant, so rather than comparing the float values we normalize them
     // back into integer color values to compare.
-    EXPECT_EQ(NormalizeToInteger<uint16_t>(XYZ.X),
-              NormalizeToInteger<uint16_t>(XYZPrime.X));
-    EXPECT_EQ(NormalizeToInteger<uint16_t>(XYZ.Y),
-              NormalizeToInteger<uint16_t>(XYZPrime.Y));
-    EXPECT_EQ(NormalizeToInteger<uint16_t>(XYZ.Z),
-              NormalizeToInteger<uint16_t>(XYZPrime.Z));
+    EXPECT_EQ(NormalizeToInteger<uint16_t>(XYZ.R),
+              NormalizeToInteger<uint16_t>(XYZPrime.R));
+    EXPECT_EQ(NormalizeToInteger<uint16_t>(XYZ.G),
+              NormalizeToInteger<uint16_t>(XYZPrime.G));
+    EXPECT_EQ(NormalizeToInteger<uint16_t>(XYZ.B),
+              NormalizeToInteger<uint16_t>(XYZPrime.B));
 
-    EXPECT_EQ(NormalizeToInteger<uint16_t>(RGB.X),
-              NormalizeToInteger<uint16_t>(RGBPrime.X));
-    EXPECT_EQ(NormalizeToInteger<uint16_t>(RGB.Y),
-              NormalizeToInteger<uint16_t>(RGBPrime.Y));
-    EXPECT_EQ(NormalizeToInteger<uint16_t>(RGB.Z),
-              NormalizeToInteger<uint16_t>(RGBPrime.Z));
+    EXPECT_EQ(NormalizeToInteger<uint16_t>(RGB.R),
+              NormalizeToInteger<uint16_t>(RGBPrime.R));
+    EXPECT_EQ(NormalizeToInteger<uint16_t>(RGB.G),
+              NormalizeToInteger<uint16_t>(RGBPrime.G));
+    EXPECT_EQ(NormalizeToInteger<uint16_t>(RGB.B),
+              NormalizeToInteger<uint16_t>(RGBPrime.B));
   }
 
   {
@@ -63,23 +62,22 @@ TEST(ColorTests, RoundTrip) {
 
     Color XYZPrime = LAB.translateSpace(Color::XYZ);
     Color RGBPrime = LAB.translateSpace(Color::RGB);
-    const int ULPS = 1000;
 
     // The floating point rounding errors across these transformations are
     // significant, so rather than comparing the float values we normalize them
     // back into integer color values to compare.
-    EXPECT_EQ(NormalizeToInteger<uint16_t>(XYZ.X),
-              NormalizeToInteger<uint16_t>(XYZPrime.X));
-    EXPECT_EQ(NormalizeToInteger<uint16_t>(XYZ.Y),
-              NormalizeToInteger<uint16_t>(XYZPrime.Y));
-    EXPECT_EQ(NormalizeToInteger<uint16_t>(XYZ.Z),
-              NormalizeToInteger<uint16_t>(XYZPrime.Z));
+    EXPECT_EQ(NormalizeToInteger<uint16_t>(XYZ.R),
+              NormalizeToInteger<uint16_t>(XYZPrime.R));
+    EXPECT_EQ(NormalizeToInteger<uint16_t>(XYZ.G),
+              NormalizeToInteger<uint16_t>(XYZPrime.G));
+    EXPECT_EQ(NormalizeToInteger<uint16_t>(XYZ.B),
+              NormalizeToInteger<uint16_t>(XYZPrime.B));
 
-    EXPECT_EQ(NormalizeToInteger<uint16_t>(RGB.X),
-              NormalizeToInteger<uint16_t>(RGBPrime.X));
-    EXPECT_EQ(NormalizeToInteger<uint16_t>(RGB.Y),
-              NormalizeToInteger<uint16_t>(RGBPrime.Y));
-    EXPECT_EQ(NormalizeToInteger<uint16_t>(RGB.Z),
-              NormalizeToInteger<uint16_t>(RGBPrime.Z));
+    EXPECT_EQ(NormalizeToInteger<uint16_t>(RGB.R),
+              NormalizeToInteger<uint16_t>(RGBPrime.R));
+    EXPECT_EQ(NormalizeToInteger<uint16_t>(RGB.G),
+              NormalizeToInteger<uint16_t>(RGBPrime.G));
+    EXPECT_EQ(NormalizeToInteger<uint16_t>(RGB.B),
+              NormalizeToInteger<uint16_t>(RGBPrime.B));
   }
 }
