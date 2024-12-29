@@ -118,7 +118,7 @@ function(add_hlsltest_lit_suite suite)
     "LLVM_TOOLS_DIR"
     )
 
-    add_lit_testsuite(check-hlsl-${suite}
+  add_lit_testsuite(check-hlsl-${suite}
     "Running the HLSL regression tests for ${suite}"
     ${CMAKE_CURRENT_BINARY_DIR}/${suite}
     DEPENDS ${HLSLTEST_DEPS}
