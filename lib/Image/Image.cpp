@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Image/Image.h"
+#include "Image/Color.h"
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
@@ -30,15 +31,8 @@ void TranslatePixelData(Image &Dst, ImageRef Src) {
   const SrcType *SrcPtr = reinterpret_cast<const SrcType *>(Src.data());
   for (uint64_t I = 0; I < Pixels; ++I) {
     for (uint32_t J = 0; J < CopiedChannels; ++J, ++SrcPtr, ++DstPtr) {
-      double Tmp = static_cast<double>(*SrcPtr);
-      // If the source type is not a float, normalize it between 0 & 1.
-      if constexpr (!std::is_floating_point<SrcType>())
-        Tmp /= std::numeric_limits<SrcType>::max();
-      // If the destination type is not a float, scale it into the integer type.
-      if constexpr (!std::is_floating_point<DstType>())
-        Tmp *= std::numeric_limits<DstType>::max();
+      *DstPtr = ColorUtils::convertColor<DstType>(*SrcPtr);
 
-      *DstPtr = static_cast<DstType>(Tmp);
       if constexpr (sizeof(DstType) > 1 && !llvm::sys::IsBigEndianHost)
         llvm::sys::swapByteOrder(*DstPtr);
     }
