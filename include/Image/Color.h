@@ -13,6 +13,7 @@
 #define HLSLTEST_IMAGE_COLOR_H
 
 #include <algorithm>
+#include <tuple>
 
 namespace hlsltest {
 
