@@ -15,9 +15,10 @@
 
 using namespace hlsltest;
 
-constexpr Color D65WhitePoint = Color(95.047, 100.000, 108.883, Color::XYZ);
+constexpr Color D65WhitePoint =
+    Color(95.047, 100.000, 108.883, ColorSpace::XYZ);
 
-static Color multiply(const Color LHS, double Mat[9], Color::Space NewSpace) {
+static Color multiply(const Color LHS, double Mat[9], ColorSpace NewSpace) {
   double X, Y, Z;
   X = (LHS.R * Mat[0]) + (LHS.G * Mat[1]) + (LHS.B * Mat[2]);
   Y = (LHS.R * Mat[3]) + (LHS.G * Mat[4]) + (LHS.B * Mat[5]);
@@ -30,7 +31,7 @@ static Color RGBToXYZ(const Color Old) {
   // Source: http://brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
   double Mat[] = {0.4124564, 0.3575761, 0.1804375, 0.2126729, 0.7151522,
                   0.0721750, 0.0193339, 0.1191920, 0.9503041};
-  return multiply(Old, Mat, Color::XYZ);
+  return multiply(Old, Mat, ColorSpace::XYZ);
 }
 
 static Color XYZToRGB(const Color Old) {
@@ -38,7 +39,7 @@ static Color XYZToRGB(const Color Old) {
   // Source: http://brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
   double Mat[] = {3.2404542, -1.5371385, -0.4985314, -0.9692660, 1.8760108,
                   0.0415560, 0.0556434,  -0.2040259, 1.0572252};
-  return multiply(Old, Mat, Color::RGB);
+  return multiply(Old, Mat, ColorSpace::RGB);
 }
 
 static double convertXYZ(double Val) {
@@ -55,7 +56,7 @@ static Color XYZToLAB(const Color Old) {
   double L = fmax(0.0, 116.0 * Y - 16.0);
   double A = 500 * (X - Y);
   double B = 200 * (Y - Z);
-  return Color(L, A, B, Color::LAB);
+  return Color(L, A, B, ColorSpace::LAB);
 }
 
 static double convertLAB(double Val) {
@@ -77,19 +78,21 @@ static Color LABToXYZ(const Color Old) {
   Y = convertLAB(Y) * D65WhitePoint.G;
   Z = convertLAB(Z) * D65WhitePoint.B;
 
-  return Color(X, Y, Z, Color::XYZ);
+  return Color(X, Y, Z, ColorSpace::XYZ);
 }
 
-Color Color::translateSpaceImpl(Space NewCS) {
+Color Color::translateSpaceImpl(ColorSpace NewCS) {
+  if (Space == NewCS)
+    return *this;
   Color Tmp = *this;
-  if (ColorSpace == Color::RGB)
+  if (Space == ColorSpace::RGB)
     Tmp = RGBToXYZ(*this);
-  else if (ColorSpace == Color::LAB)
+  else if (Space == ColorSpace::LAB)
     Tmp = LABToXYZ(*this);
   // Tmp is now in XYZ space.
-  if (NewCS == Color::RGB)
+  if (NewCS == ColorSpace::RGB)
     return XYZToRGB(Tmp);
-  if (NewCS == Color::LAB)
+  if (NewCS == ColorSpace::LAB)
     return XYZToLAB(Tmp);
   return Tmp;
 }
