@@ -75,6 +75,7 @@ DescriptorSets:
 # this test doesn't yet do anything... so we should skip it.
 
 # REQUIRES: goldenimage
+# UNSUPPORTED: Clang
 # RUN: split-file %s %t
 # RUN: %if DirectX %{ dxc -T cs_6_0 -Fo %t.dxil %t/source.hlsl %}
 # RUN: %if DirectX %{ %offloader %t/pipeline.yaml %t.dxil -r Output -o %t/output.png %}
