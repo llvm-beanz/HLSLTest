@@ -83,4 +83,4 @@ DescriptorSets:
 # RUN: %if Metal %{ dxc -T cs_6_0 -Fo %t.dxil %t/source.hlsl %}
 # RUN: %if Metal %{ metal-shaderconverter %t.dxil -o=%t.metallib %}
 # RUN: %if Metal %{ %offloader %t/pipeline.yaml %t.metallib -r Output -o %t/output.png %}
-# RUN: cmp %t/output.png %goldenimage_dir/hlsl/Basic/Mandelbrot.png
+# RUN: imgdiff %t/output.png %goldenimage_dir/hlsl/Basic/Mandelbrot.png

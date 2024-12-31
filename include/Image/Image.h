@@ -12,6 +12,7 @@
 #ifndef HLSLTEST_IMAGE_IMAGE_H
 #define HLSLTEST_IMAGE_IMAGE_H
 
+#include "Image/Color.h"
 #include "Support/Pipeline.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -81,6 +82,14 @@ class Image : public ImageRef {
     Data = llvm::StringRef(OwnedData.get(), Sz);
   }
 
+  Image(uint32_t H, uint32_t W, uint8_t D, uint8_t C, bool F,
+        std::unique_ptr<char[]> &&Ptr)
+      : ImageRef(H, W, D, C, F), OwnedData(std::move(Ptr)) {
+    uint64_t Sz = static_cast<uint64_t>(H) * static_cast<uint64_t>(W) *
+                  static_cast<uint64_t>(D) * static_cast<uint64_t>(C);
+    Data = llvm::StringRef(OwnedData.get(), Sz);
+  }
+
 public:
   // Not default constructable.
   Image() = delete;
@@ -93,10 +102,14 @@ public:
 
   ImageRef getRef() const { return ImageRef(*this); }
 
-  static llvm::Error WritePNG(ImageRef I, llvm::StringRef Path);
+  static llvm::Error writePNG(ImageRef I, llvm::StringRef Path);
 
   static Image translateImage(ImageRef I, uint8_t Depth, uint8_t Channels,
                               bool Float);
+  static llvm::Expected<Image> loadPNG(llvm::StringRef Path);
+
+  static llvm::Expected<Image> computeDistance(ImageRef LHS, ImageRef RHS,
+                                               double &RMS, double &Furthest);
 
   char *data() { return OwnedData.get(); }
 };

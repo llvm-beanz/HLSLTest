@@ -38,7 +38,8 @@ config.test_exec_root = os.path.join(config.hlsltest_obj_root, "test", config.hl
 
 tools = [
     ToolSubst("FileCheck", FindTool("FileCheck")),
-    ToolSubst("split-file", FindTool("split-file"))
+    ToolSubst("split-file", FindTool("split-file")),
+    ToolSubst("imgdiff", FindTool("imgdiff"))
 ]
 
 if config.hlsltest_test_warp:
