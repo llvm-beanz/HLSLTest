@@ -146,7 +146,9 @@ jobs:
           lfs: true
           fetch-depth: 1
       - name: Checkout Golden Images - LFS objects
-        run: git lfs checkout
+        run: |
+             cd golden-images
+             git lfs checkout
       - name: Setup Windows
         if: inputs.OS == 'windows'
         uses: llvm/actions/setup-windows@main
