@@ -15,6 +15,7 @@
 #include "Image/Color.h"
 #include "Support/Pipeline.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/Error.h"
@@ -22,7 +23,39 @@
 #include <cassert>
 #include <cstdint>
 
+namespace llvm {
+class raw_ostream;
+}
 namespace hlsltest {
+
+class ImageComparatorBase {
+public:
+  virtual ~ImageComparatorBase() {}
+  virtual void processPixel(Color L, Color R) = 0;
+  virtual void print(llvm::raw_ostream &OS) {}
+  virtual bool result() { return true; }
+};
+
+class ImageComparatorRef {
+  std::unique_ptr<ImageComparatorBase> Comp;
+  ImageComparatorRef() = delete;
+
+public:
+  ImageComparatorRef(std::unique_ptr<ImageComparatorBase> &&C)
+      : Comp(std::move(C)) {}
+  ImageComparatorRef(ImageComparatorRef &&) = default;
+  void processPixel(Color L, Color R) { Comp->processPixel(L, R); }
+
+  void print(llvm::raw_ostream &OS) { Comp->print(OS); };
+
+  bool result() { return Comp->result(); }
+};
+
+template <typename T, typename... ArgTs>
+std::enable_if_t<std::is_base_of_v<ImageComparatorBase, T>, ImageComparatorRef>
+make_comparator(ArgTs &&...Args) {
+  return ImageComparatorRef(std::make_unique<T>(Args...));
+}
 
 class ImageRef {
   uint32_t Height;
@@ -90,6 +123,8 @@ class Image : public ImageRef {
     Data = llvm::StringRef(OwnedData.get(), Sz);
   }
 
+  friend class ImageComparatorDiffImage;
+
 public:
   // Not default constructable.
   Image() = delete;
@@ -108,8 +143,9 @@ public:
                               bool Float);
   static llvm::Expected<Image> loadPNG(llvm::StringRef Path);
 
-  static llvm::Expected<Image> computeDistance(ImageRef LHS, ImageRef RHS,
-                                               double &RMS, double &Furthest);
+  static llvm::Error
+  compareImages(ImageRef LHS, ImageRef RHS,
+                llvm::MutableArrayRef<ImageComparatorRef> Comparators);
 
   char *data() { return OwnedData.get(); }
 };

@@ -11,6 +11,7 @@
 
 #include "Image/Color.h"
 #include "Image/Image.h"
+#include "Image/ImageComparators.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -59,21 +60,22 @@ int main(int ArgC, char **ArgV) {
                                   "Images do not match"));
     return 0;
   case ComparisonMode::CIE76: {
-    double RMS = 0.0;
-    double Furthest = 0.0;
-    auto ExDiff =
-        Image::computeDistance(ExpectedImage, ActualImage, RMS, Furthest);
-    if (!ExDiff)
-      ExitOnErr(ExDiff.takeError());
-    llvm::outs() << "RMS Difference: " << RMS << "\n";
-    llvm::outs() << "Furthest Pixel Difference: " << Furthest << "\n";
+    llvm::SmallVector<ImageComparatorRef> Cmps;
+    Cmps.push_back(make_comparator<ImageComparatorDistance>());
     if (!OutputFilename.empty())
-      ExitOnErr(Image::writePNG(*ExDiff, OutputFilename));
+      Cmps.push_back(make_comparator<ImageComparatorDiffImage>(
+          ExpectedImage.getHeight(), ExpectedImage.getWidth(), OutputFilename));
 
-    // 2.3 corresponds to a "just noticeable distance" for the CIE76
-    // difference algorithm. If no pixels are worse than that, there should be
-    // no noticeable difference in the image.
-    if (Furthest < 2.3)
+    ExitOnErr(Image::compareImages(ExpectedImage, ActualImage, Cmps));
+
+    bool Success = true;
+    for (auto &Cmp : Cmps)
+      Success = Cmp.result() && Success;
+
+    for (auto &Cmp : Cmps)
+      Cmp.print(llvm::errs());
+
+    if (Success)
       return 0;
   }
   }

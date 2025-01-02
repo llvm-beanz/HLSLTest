@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <assert.h>
+#include <math.h>
 #include <tuple>
 #include <type_traits>
 
@@ -95,6 +96,13 @@ public:
   Color operator-(const Color &C) const {
     assert(Space == C.Space && "Subtracting colors in different spaces!");
     return Color(abs(R - C.R), abs(G - C.G), abs(B - C.B), Space);
+  }
+
+  static double CIE75Distance(Color L, Color R) {
+    Color LCol = L.translateSpace(ColorSpace::LAB);
+    Color RCol = R.translateSpace(ColorSpace::LAB);
+    Color Res = LCol - RCol;
+    return std::sqrt((Res.R * Res.R) + (Res.G * Res.G) + (Res.B * Res.B));
   }
 
 private:

@@ -211,8 +211,9 @@ llvm::Expected<Image> Image::loadPNG(llvm::StringRef Path) {
   return Result;
 }
 
-llvm::Expected<Image> Image::computeDistance(ImageRef LHS, ImageRef RHS,
-                                             double &RMS, double &Furthest) {
+llvm::Error
+Image::compareImages(ImageRef LHS, ImageRef RHS,
+                     llvm::MutableArrayRef<ImageComparatorRef> Comparators) {
   if (LHS.getHeight() != RHS.getHeight() || LHS.getWidth() != RHS.getWidth())
     return llvm::createStringError(
         std::errc::not_supported,
@@ -227,32 +228,17 @@ llvm::Expected<Image> Image::computeDistance(ImageRef LHS, ImageRef RHS,
   Image L = Image::translateImage(LHS, CmpDepth, CmpChannels, true);
   Image R = Image::translateImage(RHS, CmpDepth, CmpChannels, true);
 
-  Image NewImage =
-      Image(LHS.getHeight(), LHS.getWidth(), CmpDepth, CmpChannels, true);
   const float *LPtr = reinterpret_cast<const float *>(L.data());
   const float *RPtr = reinterpret_cast<const float *>(R.data());
-  float *Diff = reinterpret_cast<float *>(NewImage.data());
 
-  uint64_t PixelCt = static_cast<uint64_t>(NewImage.getHeight()) *
-                     static_cast<uint64_t>(NewImage.getWidth());
-  RMS = 0.0;
-  for (uint64_t I = 0; I < PixelCt; ++I, LPtr += 3, RPtr += 3, Diff += 3) {
-    Color LCol =
-        Color(LPtr[0], LPtr[1], LPtr[2]).translateSpace(ColorSpace::LAB);
-    Color RCol =
-        Color(RPtr[0], RPtr[1], RPtr[2]).translateSpace(ColorSpace::LAB);
-
-    Diff[0] = abs(LPtr[0] - RPtr[0]);
-    Diff[1] = abs(LPtr[1] - RPtr[1]);
-    Diff[2] = abs(LPtr[2] - RPtr[2]);
-    Color Res = LCol - RCol;
-    double Distance =
-        std::sqrt((Res.R * Res.R) + (Res.G * Res.G) + (Res.B * Res.B));
-    Furthest = std::max(Furthest, Distance);
-    RMS += Distance;
+  uint64_t PixelCt = static_cast<uint64_t>(LHS.getHeight()) *
+                     static_cast<uint64_t>(LHS.getWidth());
+  for (uint64_t I = 0; I < PixelCt; ++I, LPtr += 3, RPtr += 3) {
+    Color L = Color(LPtr[0], LPtr[1], LPtr[2]);
+    Color R = Color(RPtr[0], RPtr[1], RPtr[2]);
+    for (auto &Cmp : Comparators)
+      Cmp.processPixel(L, R);
   }
 
-  RMS /= (PixelCt * CmpChannels);
-
-  return NewImage;
+  return llvm::Error::success();
 }
