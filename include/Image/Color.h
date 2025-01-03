@@ -9,8 +9,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef HLSLTEST_IMAGE_COLOR_H
-#define HLSLTEST_IMAGE_COLOR_H
+#ifndef OFFLOADTEST_IMAGE_COLOR_H
+#define OFFLOADTEST_IMAGE_COLOR_H
 
 #include <algorithm>
 #include <assert.h>
@@ -18,7 +18,7 @@
 #include <tuple>
 #include <type_traits>
 
-namespace hlsltest {
+namespace offloadtest {
 
 namespace ColorUtils {
 template <typename T>
@@ -109,6 +109,6 @@ private:
   Color translateSpaceImpl(ColorSpace NewCS);
 };
 
-} // namespace hlsltest
+} // namespace offloadtest
 
-#endif // HLSLTEST_IMAGE_COLOR_H
+#endif // OFFLOADTEST_IMAGE_COLOR_H

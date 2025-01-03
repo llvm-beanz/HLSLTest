@@ -1,4 +1,4 @@
-//===- Capabilities.cpp - HLSL API Capabilities API -----------------------===//
+//===- Capabilities.cpp - Capabilities API --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 
 #include "API/Capabilities.h"
 
-using namespace hlsltest;
+using namespace offloadtest;
 
 char CapabilityValueBase::ID = 0;
 char CapabilityValueBool::ID = 0;

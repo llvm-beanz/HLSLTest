@@ -1,3 +1,3 @@
-add_hlsltest_unittest(ImageTests ColorTests.cpp)
+add_offloadtest_unittest(ImageTests ColorTests.cpp)
 
-target_link_libraries(ImageTests PRIVATE HLSLTestImage)
+target_link_libraries(ImageTests PRIVATE OffloadTestImage)

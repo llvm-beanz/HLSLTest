@@ -1,4 +1,4 @@
-//===- DX/DXFeatures.cpp - HLSL API DirectX Device API --------------------===//
+//===- DX/DXFeatures.cpp - DirectX Device API -----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,8 +12,8 @@
 #include "DXFeatures.h"
 #include "llvm/Support/ScopedPrinter.h"
 
-using namespace hlsltest;
-using namespace hlsltest::directx;
+using namespace offloadtest;
+using namespace offloadtest::directx;
 using namespace llvm;
 
 #define SHADER_MODEL_ENUM(NewCase, Str, Value) {#Str, NewCase},

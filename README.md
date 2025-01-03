@@ -1,4 +1,4 @@
-# HLSLTest
+# OffloadTest
 Experimental Runtime test suite for HLSL
 
 ## Current Status
@@ -26,7 +26,7 @@ pip3 install pyyaml
 Add the following to the CMake options:
 
 ```shell
--DLLVM_EXTERNAL_HLSLTEST_SOURCE_DIR=${workspaceRoot}\..\HLSLTest -DLLVM_EXTERNAL_PROJECTS="HLSLTest"
+-DLLVM_EXTERNAL_OFFLOADTEST_SOURCE_DIR=${workspaceRoot}\..\OffloadTest -DLLVM_EXTERNAL_PROJECTS="OffloadTest"
 ```
 
 If you do not have a build of dxc on your path you'll need to specify the shader

@@ -1,8 +1,8 @@
-add_hlsl_tool(offloader
+add_offloadtest_tool(offloader
               offloader.cpp)
 
 target_link_libraries(offloader PRIVATE
                       LLVMSupport
-                      HLSLTestAPI
-                      HLSLTestImage
-                      HLSLTestSupport)
+                      OffloadTestAPI
+                      OffloadTestImage
+                      OffloadTestSupport)

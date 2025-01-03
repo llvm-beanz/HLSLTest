@@ -1,4 +1,4 @@
-//===- API.h - HLSL GPU API -----------------------------------------------===//
+//===- API.h - Offload GPU API --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,13 +9,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef HLSLTEST_API_API_H
-#define HLSLTEST_API_API_H
+#ifndef OFFLOADTEST_API_API_H
+#define OFFLOADTEST_API_API_H
 
-namespace hlsltest {
+namespace offloadtest {
 
 enum class GPUAPI { Unknown, DirectX, Vulkan, Metal };
 
 }
 
-#endif // HLSLTEST_API_API_H
+#endif // OFFLOADTEST_API_API_H

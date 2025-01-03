@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef HLSLTEST_SUPPORT_PIPELINE_H
-#define HLSLTEST_SUPPORT_PIPELINE_H
+#ifndef OFFLOADTEST_SUPPORT_PIPELINE_H
+#define OFFLOADTEST_SUPPORT_PIPELINE_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -19,7 +19,7 @@
 #include <memory>
 #include <string>
 
-namespace hlsltest {
+namespace offloadtest {
 
 enum class DataFormat {
   Hex8,
@@ -64,9 +64,7 @@ struct Resource {
   DirectXBinding DXBinding;
   OutputProperties OutputProps;
 
-  bool isRaw() const {
-    return RawSize > 0;
-  }
+  bool isRaw() const { return RawSize > 0; }
 
   uint32_t getElementSize() const {
     if (isRaw())
@@ -112,37 +110,37 @@ struct Pipeline {
     return DescriptorCount;
   }
 };
-} // namespace hlsltest
+} // namespace offloadtest
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(hlsltest::DescriptorSet)
-LLVM_YAML_IS_SEQUENCE_VECTOR(hlsltest::Resource)
+LLVM_YAML_IS_SEQUENCE_VECTOR(offloadtest::DescriptorSet)
+LLVM_YAML_IS_SEQUENCE_VECTOR(offloadtest::Resource)
 
 namespace llvm {
 namespace yaml {
 
-template <> struct MappingTraits<hlsltest::Pipeline> {
-  static void mapping(IO &I, hlsltest::Pipeline &P);
+template <> struct MappingTraits<offloadtest::Pipeline> {
+  static void mapping(IO &I, offloadtest::Pipeline &P);
 };
 
-template <> struct MappingTraits<hlsltest::DescriptorSet> {
-  static void mapping(IO &I, hlsltest::DescriptorSet &D);
+template <> struct MappingTraits<offloadtest::DescriptorSet> {
+  static void mapping(IO &I, offloadtest::DescriptorSet &D);
 };
 
-template <> struct MappingTraits<hlsltest::Resource> {
-  static void mapping(IO &I, hlsltest::Resource &R);
+template <> struct MappingTraits<offloadtest::Resource> {
+  static void mapping(IO &I, offloadtest::Resource &R);
 };
 
-template <> struct MappingTraits<hlsltest::DirectXBinding> {
-  static void mapping(IO &I, hlsltest::DirectXBinding &B);
+template <> struct MappingTraits<offloadtest::DirectXBinding> {
+  static void mapping(IO &I, offloadtest::DirectXBinding &B);
 };
 
-template <> struct MappingTraits<hlsltest::OutputProperties> {
-  static void mapping(IO &I, hlsltest::OutputProperties &P);
+template <> struct MappingTraits<offloadtest::OutputProperties> {
+  static void mapping(IO &I, offloadtest::OutputProperties &P);
 };
 
-template <> struct ScalarEnumerationTraits<hlsltest::DataFormat> {
-  static void enumeration(IO &I, hlsltest::DataFormat &V) {
-#define ENUM_CASE(Val) I.enumCase(V, #Val, hlsltest::DataFormat::Val)
+template <> struct ScalarEnumerationTraits<offloadtest::DataFormat> {
+  static void enumeration(IO &I, offloadtest::DataFormat &V) {
+#define ENUM_CASE(Val) I.enumCase(V, #Val, offloadtest::DataFormat::Val)
     ENUM_CASE(Hex8);
     ENUM_CASE(Hex16);
     ENUM_CASE(Hex32);
@@ -159,9 +157,9 @@ template <> struct ScalarEnumerationTraits<hlsltest::DataFormat> {
   }
 };
 
-template <> struct ScalarEnumerationTraits<hlsltest::DataAccess> {
-  static void enumeration(IO &I, hlsltest::DataAccess &V) {
-#define ENUM_CASE(Val) I.enumCase(V, #Val, hlsltest::DataAccess::Val)
+template <> struct ScalarEnumerationTraits<offloadtest::DataAccess> {
+  static void enumeration(IO &I, offloadtest::DataAccess &V) {
+#define ENUM_CASE(Val) I.enumCase(V, #Val, offloadtest::DataAccess::Val)
     ENUM_CASE(ReadOnly);
     ENUM_CASE(ReadWrite);
     ENUM_CASE(Constant);
@@ -171,4 +169,4 @@ template <> struct ScalarEnumerationTraits<hlsltest::DataAccess> {
 } // namespace yaml
 } // namespace llvm
 
-#endif // HLSLTEST_SUPPORT_PIPELINE_H
+#endif // OFFLOADTEST_SUPPORT_PIPELINE_H

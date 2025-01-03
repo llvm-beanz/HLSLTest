@@ -96,7 +96,7 @@ option(PNG_HARDWARE_OPTIMIZATIONS "Enable hardware optimizations" ON)
 # subproject, its location can be passed on to CMake via the ZLIB_ROOT variable.
 option(PNG_BUILD_ZLIB "Custom zlib location, else find_package is used" OFF)
 if(NOT PNG_BUILD_ZLIB)
-  find_package(ZLIB) # HLSLTest Change: Made this not required to hack around it
+  find_package(ZLIB) # OffloadTest Change: Made this not required to hack around it
 elseif(POLICY CMP0074)
   if("x${ZLIB_ROOT}" STREQUAL "x")
     message(DEPRECATION

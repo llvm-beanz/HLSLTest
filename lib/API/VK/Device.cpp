@@ -1,4 +1,4 @@
-//===- VX/Device.cpp - HLSL API Vulkan Device API -------------------------===//
+//===- VX/Device.cpp - Vulkan Device API ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@
 #include <memory>
 #include <vulkan/vulkan.h>
 
-using namespace hlsltest;
+using namespace offloadtest;
 
 #define VKFormats(FMT)                                                         \
   if (Channels == 1)                                                           \
@@ -41,7 +41,7 @@ static VkFormat getVKFormat(DataFormat Format, int Channels) {
 }
 namespace {
 
-class VKDevice : public hlsltest::Device {
+class VKDevice : public offloadtest::Device {
 private:
   VkPhysicalDevice Device;
   VkPhysicalDeviceProperties Props;
@@ -734,7 +734,7 @@ public:
   llvm::Error initialize() {
     VkApplicationInfo AppInfo = {};
     AppInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    AppInfo.pApplicationName = "HLSLTest";
+    AppInfo.pApplicationName = "OffloadTest";
     AppInfo.apiVersion = VK_API_VERSION_1_1;
 
     VkInstanceCreateInfo CreateInfo = {};

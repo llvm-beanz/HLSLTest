@@ -9,8 +9,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef HLSLTEST_IMAGE_IMAGE_H
-#define HLSLTEST_IMAGE_IMAGE_H
+#ifndef OFFLOADTEST_IMAGE_IMAGE_H
+#define OFFLOADTEST_IMAGE_IMAGE_H
 
 #include "Image/Color.h"
 #include "Support/Pipeline.h"
@@ -26,7 +26,7 @@
 namespace llvm {
 class raw_ostream;
 }
-namespace hlsltest {
+namespace offloadtest {
 
 class ImageComparatorBase {
 public:
@@ -150,6 +150,6 @@ public:
   char *data() { return OwnedData.get(); }
 };
 
-} // namespace hlsltest
+} // namespace offloadtest
 
-#endif // HLSLTEST_IMAGE_IMAGE_H
+#endif // OFFLOADTEST_IMAGE_IMAGE_H

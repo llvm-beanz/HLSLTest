@@ -13,7 +13,7 @@
 
 #include <math.h>
 
-using namespace hlsltest;
+using namespace offloadtest;
 
 constexpr Color D65WhitePoint =
     Color(95.047, 100.000, 108.883, ColorSpace::XYZ);

@@ -1,4 +1,4 @@
-//===- Capabilities.h - HLSL API Capabilities API -------------------------===//
+//===- Capabilities.h - Offload API Capabilities API ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,8 +9,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef HLSLTEST_API_CAPABILITIES_H
-#define HLSLTEST_API_CAPABILITIES_H
+#ifndef OFFLOADTEST_API_CAPABILITIES_H
+#define OFFLOADTEST_API_CAPABILITIES_H
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -19,7 +19,7 @@
 #include <memory>
 #include <string>
 
-namespace hlsltest {
+namespace offloadtest {
 
 class CapabilityValueBase {
 public:
@@ -95,8 +95,7 @@ template <> struct CapabilityTypeHelper<uint32_t> {
 };
 } // namespace detail
 
-template<typename T>
-struct CapabilityPrinter;
+template <typename T> struct CapabilityPrinter;
 
 template <typename T>
 using CapabilityType = typename detail::CapabilityTypeHelper<T>::Capability;
@@ -147,6 +146,6 @@ make_capability(llvm::StringRef N, T Value) {
 
 using Capabilities = llvm::StringMap<Capability>;
 
-} // namespace hlsltest
+} // namespace offloadtest
 
-#endif // HLSLTEST_API_CAPABILITIES_H
+#endif // OFFLOADTEST_API_CAPABILITIES_H

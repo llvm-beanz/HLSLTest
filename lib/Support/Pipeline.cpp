@@ -1,4 +1,4 @@
-//===- Pipeline.cpp - Support Pipeline API --------------------------------===//
+//===- Pipeline.cpp - Support Pipeline ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,22 +11,24 @@
 
 #include "Support/Pipeline.h"
 
-using namespace hlsltest;
+using namespace offloadtest;
 
 namespace llvm {
 namespace yaml {
-void MappingTraits<hlsltest::Pipeline>::mapping(IO &I, hlsltest::Pipeline &P) {
+void MappingTraits<offloadtest::Pipeline>::mapping(IO &I,
+                                                   offloadtest::Pipeline &P) {
   MutableArrayRef<int> MutableDispatchSize(P.DispatchSize);
   I.mapRequired("DispatchSize", MutableDispatchSize);
   I.mapRequired("DescriptorSets", P.Sets);
 }
 
-void MappingTraits<hlsltest::DescriptorSet>::mapping(
-    IO &I, hlsltest::DescriptorSet &D) {
+void MappingTraits<offloadtest::DescriptorSet>::mapping(
+    IO &I, offloadtest::DescriptorSet &D) {
   I.mapRequired("Resources", D.Resources);
 }
 
-void MappingTraits<hlsltest::Resource>::mapping(IO &I, hlsltest::Resource &R) {
+void MappingTraits<offloadtest::Resource>::mapping(IO &I,
+                                                   offloadtest::Resource &R) {
   I.mapRequired("Access", R.Access);
   I.mapRequired("Format", R.Format);
   I.mapOptional("Channels", R.Channels, 1);
@@ -74,14 +76,14 @@ void MappingTraits<hlsltest::Resource>::mapping(IO &I, hlsltest::Resource &R) {
   I.mapOptional("OutputProps", R.OutputProps);
 }
 
-void MappingTraits<hlsltest::DirectXBinding>::mapping(
-    IO &I, hlsltest::DirectXBinding &B) {
+void MappingTraits<offloadtest::DirectXBinding>::mapping(
+    IO &I, offloadtest::DirectXBinding &B) {
   I.mapRequired("Register", B.Register);
   I.mapRequired("Space", B.Space);
 }
 
-void MappingTraits<hlsltest::OutputProperties>::mapping(
-    IO &I, hlsltest::OutputProperties &P) {
+void MappingTraits<offloadtest::OutputProperties>::mapping(
+    IO &I, offloadtest::OutputProperties &P) {
   I.mapRequired("Name", P.Name);
   I.mapRequired("Height", P.Height);
   I.mapRequired("Width", P.Width);

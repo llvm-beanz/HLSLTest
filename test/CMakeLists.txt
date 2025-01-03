@@ -54,19 +54,19 @@ function(try_compile_hlsl output)
   message(STATUS "${output} - ${${output}}")
 endfunction()
 
-list(APPEND HLSLTEST_DEPS
+list(APPEND OFFLOADTEST_DEPS
   api-query
   offloader
   FileCheck
   split-file
   imgdiff
-  HLSLTestUnit)
+  OffloadTestUnit)
 
-if (HLSLTEST_TEST_CLANG)
-  list(APPEND HLSLTEST_DEPS clang)
+if (OFFLOADTEST_TEST_CLANG)
+  list(APPEND OFFLOADTEST_DEPS clang)
 endif()
 
-add_custom_target(hlsl-test-depends DEPENDS ${HLSLTEST_DEPS})
+add_custom_target(hlsl-test-depends DEPENDS ${OFFLOADTEST_DEPS})
 
 try_compile_hlsl(SUPPORTS_SPIRV SOURCE
                 "RWBuffer<int> In : register(u0);
@@ -86,19 +86,19 @@ set(TEST_mtl False)
 set(FORCE_CLANG False)
 set(FORCE_WARP False)
 
-if (HLSLTEST_ENABLE_D3D12)
+if (OFFLOADTEST_ENABLE_D3D12)
   list(APPEND platforms_to_test d3d12)
 endif()
 
-if (SUPPORTS_SPIRV AND HLSLTEST_ENABLE_VULKAN)
+if (SUPPORTS_SPIRV AND OFFLOADTEST_ENABLE_VULKAN)
   list(APPEND platforms_to_test vk)
 endif()
 
-if (HLSLTEST_ENABLE_METAL)
+if (OFFLOADTEST_ENABLE_METAL)
   list(APPEND platforms_to_test mtl)
 endif()
 
-llvm_canonicalize_cmake_booleans(HLSLTEST_TEST_CLANG)
+llvm_canonicalize_cmake_booleans(OFFLOADTEST_TEST_CLANG)
 
 foreach(platform ${platforms_to_test})
   set(TEST_${platform} False)
@@ -108,26 +108,26 @@ endforeach()
 # expanding it into lit.
 cmake_path(SET DXC_DIR NORMALIZE "${DXC_DIR}")
 
-function(add_hlsltest_lit_suite suite)
+function(add_offloadtest_lit_suite suite)
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
     ${CMAKE_CURRENT_BINARY_DIR}/${suite}/lit.site.cfg.py
     MAIN_CONFIG
     ${CMAKE_CURRENT_BINARY_DIR}/${suite}/lit.cfg.py
     PATHS
-    "HLSLTEST_BINARY_DIR"
+    "OFFLOADTEST_BINARY_DIR"
     "LLVM_TOOLS_DIR"
     )
 
   add_lit_testsuite(check-hlsl-${suite}
     "Running the HLSL regression tests for ${suite}"
     ${CMAKE_CURRENT_BINARY_DIR}/${suite}
-    DEPENDS ${HLSLTEST_DEPS}
+    DEPENDS ${OFFLOADTEST_DEPS}
     )
   set_target_properties(check-hlsl-${suite} PROPERTIES FOLDER "HLSL tests")
 
   add_lit_testsuites(hlsl-${suite} ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS ${HLSLTEST_DEPS}
+    DEPENDS ${OFFLOADTEST_DEPS}
     FOLDER "HLSL tests/Suites/${suite}"
   )
 endfunction()
@@ -141,24 +141,24 @@ configure_lit_site_cfg(
     MAIN_CONFIG
     ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.cfg.py
     PATHS
-    "HLSLTEST_BINARY_DIR"
+    "OFFLOADTEST_BINARY_DIR"
     "LLVM_TOOLS_DIR"
     )
 add_lit_testsuite(check-hlsl-unit
     "Running the offload test unit test suite"
     ${CMAKE_CURRENT_BINARY_DIR}/Unit
-    DEPENDS ${HLSLTEST_DEPS}
+    DEPENDS ${OFFLOADTEST_DEPS}
     )
 set_target_properties(check-hlsl-unit PROPERTIES FOLDER "HLSL tests")
 
-if (NOT HLSLTEST_WARP_ONLY)
+if (NOT OFFLOADTEST_WARP_ONLY)
   foreach(platform ${platforms_to_test})
     set(TEST_${platform} True)
-    add_hlsltest_lit_suite(${platform})
+    add_offloadtest_lit_suite(${platform})
 
-    if (HLSLTEST_TEST_CLANG)
+    if (OFFLOADTEST_TEST_CLANG)
       set(FORCE_CLANG True)
-      add_hlsltest_lit_suite(clang-${platform})
+      add_offloadtest_lit_suite(clang-${platform})
       set(FORCE_CLANG False)
     endif()
 
@@ -166,14 +166,14 @@ if (NOT HLSLTEST_WARP_ONLY)
   endforeach()
 endif()
 
-if (HLSLTEST_ENABLE_D3D12)
+if (OFFLOADTEST_ENABLE_D3D12)
   set(TEST_d3d12 True)
   set(FORCE_WARP True)
-  add_hlsltest_lit_suite(warp-d3d12)
+  add_offloadtest_lit_suite(warp-d3d12)
 
-  if (HLSLTEST_TEST_CLANG)
+  if (OFFLOADTEST_TEST_CLANG)
     set(FORCE_CLANG True)
-    add_hlsltest_lit_suite(clang-warp-d3d12)
+    add_offloadtest_lit_suite(clang-warp-d3d12)
     set(FORCE_CLANG False)
   endif()
 

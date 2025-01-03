@@ -16,7 +16,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
-using namespace hlsltest;
+using namespace offloadtest;
 
 static llvm::Error toError(NS::Error *Err) {
   if (!Err)
@@ -51,7 +51,7 @@ static MTL::PixelFormat getMTLFormat(DataFormat Format, int Channels) {
 }
 
 namespace {
-class MTLDevice : public hlsltest::Device {
+class MTLDevice : public offloadtest::Device {
   Capabilities Caps;
   MTL::Device *Device;
 

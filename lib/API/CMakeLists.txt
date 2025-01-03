@@ -1,10 +1,10 @@
-if (HLSLTEST_ENABLE_VULKAN)
+if (OFFLOADTEST_ENABLE_VULKAN)
   list(APPEND api_sources VK/Device.cpp)
   list(APPEND api_libraries ${Vulkan_LIBRARIES})
   list(APPEND api_headers PRIVATE ${Vulkan_INCLUDE_DIRS})
 endif()
 
-if (HLSLTEST_ENABLE_D3D12)
+if (OFFLOADTEST_ENABLE_D3D12)
   list(APPEND api_sources DX/Device.cpp DX/DXFeatures.cpp)
   list(APPEND api_libraries ${D3D12_LIBRARIES})
   list(APPEND api_headers PRIVATE ${DIRECTX_HEADERS_PATH}/include/directx)
@@ -20,14 +20,14 @@ if (APPLE)
   list(APPEND api_headers PRIVATE ${METAL_INCLUDE_DIRS})
 endif()
 
-add_hlsl_library(API
+add_offloadtest_library(API
   Capabilities.cpp
   Device.cpp
   ${api_sources})
 
-target_include_directories(HLSLTestAPI SYSTEM BEFORE ${api_headers})
+target_include_directories(OffloadTestAPI SYSTEM BEFORE ${api_headers})
 
-target_link_libraries(HLSLTestAPI INTERFACE HLSLTestSupport ${api_libraries})
+target_link_libraries(OffloadTestAPI INTERFACE OffloadTestSupport ${api_libraries})
 if (TARGET DIRECTX_HEADERS)
-  add_dependencies(HLSLTestAPI DIRECTX_HEADERS)
+  add_dependencies(OffloadTestAPI DIRECTX_HEADERS)
 endif()

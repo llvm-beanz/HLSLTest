@@ -12,7 +12,7 @@
 #include "Image/ImageComparators.h"
 
 using namespace llvm;
-using namespace hlsltest;
+using namespace offloadtest;
 
 void yaml::MappingTraits<CompareCheck>::mapping(IO &I, CompareCheck &C) {
   I.mapRequired("Type", C.Type);

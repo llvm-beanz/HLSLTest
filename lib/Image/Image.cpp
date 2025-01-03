@@ -23,7 +23,7 @@
 #include <limits.h>
 #include <stdio.h>
 
-using namespace hlsltest;
+using namespace offloadtest;
 
 template <typename DstType, typename SrcType>
 void TranslatePixelData(Image &Dst, ImageRef Src, bool ForWrite) {
