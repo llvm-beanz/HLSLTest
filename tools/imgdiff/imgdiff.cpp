@@ -42,6 +42,9 @@ static cl::opt<ComparisonMode>
 static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"));
 
+static cl::opt<std::string> RulesFilename("rules", cl::desc("Rules filename"),
+                                          cl::value_desc("filename"));
+
 int main(int ArgC, char **ArgV) {
   InitLLVM X(ArgC, ArgV);
   cl::ParseCommandLineOptions(ArgC, ArgV, "Image Comparison Tool");
@@ -52,6 +55,7 @@ int main(int ArgC, char **ArgV) {
   if (ExpectedImage.size() != ActualImage.size())
     ExitOnErr(createStringError(std::errc::executable_format_error,
                                 "Image sizes do not match"));
+
   switch (Mode) {
   case ComparisonMode::ExactMatch:
     if (0 !=
@@ -61,7 +65,19 @@ int main(int ArgC, char **ArgV) {
     return 0;
   case ComparisonMode::CIE76: {
     llvm::SmallVector<ImageComparatorRef> Cmps;
-    Cmps.push_back(make_comparator<ImageComparatorDistance>());
+
+    if (!RulesFilename.empty()) {
+      ErrorOr<std::unique_ptr<MemoryBuffer>> RulesFile =
+          MemoryBuffer::getFileOrSTDIN(RulesFilename);
+      ExitOnErr(errorCodeToError(RulesFile.getError()));
+      std::vector<CompareCheck> Rules;
+      yaml::Input YIn((*RulesFile)->getBuffer());
+      YIn >> Rules;
+      ExitOnErr(llvm::errorCodeToError(YIn.error()));
+      Cmps.push_back(make_comparator<ImageComparatorDistance>(Rules));
+    } else {
+      Cmps.push_back(make_comparator<ImageComparatorDistance>());
+    }
     if (!OutputFilename.empty())
       Cmps.push_back(make_comparator<ImageComparatorDiffImage>(
           ExpectedImage.getHeight(), ExpectedImage.getWidth(), OutputFilename));
