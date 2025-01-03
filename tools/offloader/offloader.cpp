@@ -140,7 +140,7 @@ int run() {
       for (const auto &R : S.Resources) {
         if (R.OutputProps.Name == ImageOutput) {
           ImageRef Img = ImageRef(R);
-          ExitOnErr(Image::WritePNG(Img, OutputFilename));
+          ExitOnErr(Image::writePNG(Img, OutputFilename));
           return 0;
         }
       }

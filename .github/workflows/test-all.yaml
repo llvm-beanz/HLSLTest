@@ -137,6 +137,13 @@ jobs:
           ref: ${{ inputs.HLSLTest-branch }}
           path: HLSLTest
           fetch-depth: 1
+      - name: Checkout Golden Images
+        uses: actions/checkout@v4
+        with:
+          repository: llvm-beanz/offload-golden-images
+          ref: main
+          path: golden-images
+          fetch-depth: 1
       - name: Setup Windows
         if: inputs.OS == 'windows'
         uses: llvm/actions/setup-windows@main
@@ -154,7 +161,7 @@ jobs:
             cd llvm-project
             mkdir build
             cd build
-            cmake -G Ninja ${{ inputs.LLVM-ExtraCMakeArgs }} -DCMAKE_BUILD_TYPE=${{ inputs.BuildType }} -C ${{ github.workspace }}/llvm-project/clang/cmake/caches/HLSL.cmake -C ${{ github.workspace }}/HLSLTest/cmake/caches/sccache.cmake -DDXC_DIR=${{ github.workspace }}/DXC/build/bin -DLLVM_EXTERNAL_HLSLTEST_SOURCE_DIR=${{ github.workspace }}/HLSLTest -DLLVM_EXTERNAL_PROJECTS="HLSLTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DHLSLTEST_TEST_CLANG=${{ inputs.Test-Clang }} ${{ github.workspace }}/llvm-project/llvm/
+            cmake -G Ninja ${{ inputs.LLVM-ExtraCMakeArgs }} -DCMAKE_BUILD_TYPE=${{ inputs.BuildType }} -C ${{ github.workspace }}/llvm-project/clang/cmake/caches/HLSL.cmake -C ${{ github.workspace }}/HLSLTest/cmake/caches/sccache.cmake -DDXC_DIR=${{ github.workspace }}/DXC/build/bin -DLLVM_EXTERNAL_HLSLTEST_SOURCE_DIR=${{ github.workspace }}/HLSLTest -DLLVM_EXTERNAL_PROJECTS="HLSLTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DHLSLTEST_TEST_CLANG=${{ inputs.Test-Clang }} -DGOLDENIMAGE_DIR=${{ github.workspace }}/golden-images ${{ github.workspace }}/llvm-project/llvm/
             ninja hlsl-test-depends
       - name: Run HLSL Tests
         run: |

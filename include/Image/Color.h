@@ -13,6 +13,8 @@
 #define HLSLTEST_IMAGE_COLOR_H
 
 #include <algorithm>
+#include <assert.h>
+#include <math.h>
 #include <tuple>
 #include <type_traits>
 
@@ -39,6 +41,7 @@ template <typename NewTy, typename OldTy> NewTy convertColor(OldTy Val) {
   if constexpr (std::is_same_v<NewTy, OldTy>)
     return Val;
   double Dbl = toDouble(Val);
+  assert(Dbl >= 0.0 && Dbl <= 1.0 && "Value should be normalized");
   if constexpr (std::is_integral_v<NewTy>)
     return toInt<NewTy>(Dbl);
   return static_cast<NewTy>(Dbl);
@@ -88,6 +91,18 @@ public:
     if (NewCS == Space)
       return *this;
     return translateSpaceImpl(NewCS);
+  }
+
+  Color operator-(const Color &C) const {
+    assert(Space == C.Space && "Subtracting colors in different spaces!");
+    return Color(abs(R - C.R), abs(G - C.G), abs(B - C.B), Space);
+  }
+
+  static double CIE75Distance(Color L, Color R) {
+    Color LCol = L.translateSpace(ColorSpace::LAB);
+    Color RCol = R.translateSpace(ColorSpace::LAB);
+    Color Res = LCol - RCol;
+    return sqrt((Res.R * Res.R) + (Res.G * Res.G) + (Res.B * Res.B));
   }
 
 private:

@@ -59,6 +59,7 @@ list(APPEND HLSLTEST_DEPS
   offloader
   FileCheck
   split-file
+  imgdiff
   HLSLTestUnit)
 
 if (HLSLTEST_TEST_CLANG)
