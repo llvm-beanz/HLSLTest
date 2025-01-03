@@ -102,7 +102,7 @@ public:
     Color LCol = L.translateSpace(ColorSpace::LAB);
     Color RCol = R.translateSpace(ColorSpace::LAB);
     Color Res = LCol - RCol;
-    return std::sqrt((Res.R * Res.R) + (Res.G * Res.G) + (Res.B * Res.B));
+    return sqrt((Res.R * Res.R) + (Res.G * Res.G) + (Res.B * Res.B));
   }
 
 private:
