@@ -16,7 +16,7 @@ from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
 
 # name: The name of this test suite.
-config.name = "HLSLTest-" + config.hlsltest_suite
+config.name = "OffloadTest-" + config.offloadtest_suite
 
 # testFormat: The test format to use to interpret tests.
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
@@ -34,7 +34,7 @@ config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt"]
 config.test_source_root = os.path.dirname(__file__)
 
 # test_exec_root: The root path where tests should be run.
-config.test_exec_root = os.path.join(config.hlsltest_obj_root, "test", config.hlsltest_suite)
+config.test_exec_root = os.path.join(config.offloadtest_obj_root, "test", config.offloadtest_suite)
 
 tools = [
     ToolSubst("FileCheck", FindTool("FileCheck")),
@@ -42,20 +42,20 @@ tools = [
     ToolSubst("imgdiff", FindTool("imgdiff"))
 ]
 
-if config.hlsltest_test_warp:
+if config.offloadtest_test_warp:
   config.available_features.add("DirectX-WARP")
   tools.append(ToolSubst("%offloader", command=FindTool("offloader"), extra_args=["-warp"]))
 else:
   tools.append(ToolSubst("%offloader", FindTool("offloader")))
 
-if config.hlsltest_test_clang:
-  if os.path.exists(config.hlsltest_dxc_dir):
-    tools.append(ToolSubst("dxc", FindTool("clang-dxc"), extra_args=["--dxv-path=%s" % config.hlsltest_dxc_dir]))
+if config.offloadtest_test_clang:
+  if os.path.exists(config.offloadtest_dxc_dir):
+    tools.append(ToolSubst("dxc", FindTool("clang-dxc"), extra_args=["--dxv-path=%s" % config.offloadtest_dxc_dir]))
   else:
     tools.append(ToolSubst("dxc", FindTool("clang-dxc")))
   config.available_features.add("Clang")
 else:
-  tools.append(ToolSubst("dxc", config.hlsltest_dxc))
+  tools.append(ToolSubst("dxc", config.offloadtest_dxc))
 
 llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
 
@@ -64,13 +64,13 @@ query_string = subprocess.check_output(api_query)
 devices = yaml.safe_load(query_string)
 
 for device in devices['Devices']:
-  if device['API'] == "DirectX" and config.hlsltest_enable_d3d12:
+  if device['API'] == "DirectX" and config.offloadtest_enable_d3d12:
     config.available_features.add("DirectX")
     if "Intel" in device['Description']:
       config.available_features.add("DirectX-Intel")
-  if device['API'] == "Metal" and config.hlsltest_enable_metal:
+  if device['API'] == "Metal" and config.offloadtest_enable_metal:
     config.available_features.add("Metal")
-  if device['API'] == "Vulkan" and config.hlsltest_enable_vulkan:
+  if device['API'] == "Vulkan" and config.offloadtest_enable_vulkan:
     config.available_features.add("Vulkan")
     if "NVIDIA" in device['Description']:
       config.available_features.add("Vulkan-NV")

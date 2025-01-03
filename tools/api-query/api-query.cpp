@@ -18,7 +18,7 @@
 
 
 using namespace llvm;
-using namespace hlsltest;
+using namespace offloadtest;
 
 int main(int ArgC, char **ArgV) {
   InitLLVM X(ArgC, ArgV);

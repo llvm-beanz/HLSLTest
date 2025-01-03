@@ -20,7 +20,7 @@
 #include <string>
 
 using namespace llvm;
-using namespace hlsltest;
+using namespace offloadtest;
 
 static cl::opt<std::string> ExpectedPath(cl::Positional,
                                          cl::desc("<expected image>"),

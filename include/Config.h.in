@@ -1,4 +1,4 @@
-/*===------- HLSLTest/Config.h - HLSLTest configuration -----------*- C -*-===*/
+/*===------- Config.h - OffloadTest configuration -----------------*- C -*-===*/
 /*                                                                            */
 /* Part of the LLVM Project, under the Apache License v2.0 with LLVM          */
 /* Exceptions.                                                                */
@@ -7,19 +7,19 @@
 /*                                                                            */
 /*===----------------------------------------------------------------------===*/
 
-#ifndef HLSLTEST_CONFIG_H
-#define HLSLTEST_CONFIG_H
+#ifndef OFFLOADTEST_CONFIG_H
+#define OFFLOADTEST_CONFIG_H
 
 /* Enable D3D12 Support */
-#cmakedefine HLSLTEST_ENABLE_D3D12
+#cmakedefine OFFLOADTEST_ENABLE_D3D12
 
 /* Enable Vulkan Support */
-#cmakedefine HLSLTEST_ENABLE_VULKAN
+#cmakedefine OFFLOADTEST_ENABLE_VULKAN
 
 /* Enable Metal Support */
-#cmakedefine HLSLTEST_ENABLE_METAL
+#cmakedefine OFFLOADTEST_ENABLE_METAL
 
 /* If building for apple platforms */
 #cmakedefine01 APPLE
 
-#endif // HLSLTEST_CONFIG_H
+#endif // OFFLOADTEST_CONFIG_H

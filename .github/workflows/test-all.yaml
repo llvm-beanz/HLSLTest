@@ -7,7 +7,7 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      HLSLTest-branch:
+      OffloadTest-branch:
         description: 'Test Suite Branch'
         required: false
         default: 'main'
@@ -66,7 +66,7 @@ on:
         type: string
   workflow_call:
     inputs:
-      HLSLTest-branch:
+      OffloadTest-branch:
         description: 'Test Suite Branch'
         required: false
         default: 'main'
@@ -130,12 +130,12 @@ jobs:
           ref: ${{ inputs.LLVM-branch }}
           path: llvm-project
           fetch-depth: 1
-      - name: Checkout HLSLTest
+      - name: Checkout OffloadTest
         uses: actions/checkout@v4
         with:
           repository: llvm-beanz/HLSLTest
-          ref: ${{ inputs.HLSLTest-branch }}
-          path: HLSLTest
+          ref: ${{ inputs.OffloadTest-branch }}
+          path: OffloadTest
           fetch-depth: 1
       - name: Checkout Golden Images
         uses: actions/checkout@v4
@@ -154,14 +154,14 @@ jobs:
             cd DXC
             mkdir build
             cd build
-            cmake -G Ninja -DCMAKE_BUILD_TYPE=${{ inputs.BuildType }} -C ${{ github.workspace }}/DXC/cmake/caches/PredefinedParams.cmake -C ${{ github.workspace }}/HLSLTest/cmake/caches/sccache.cmake -DHLSL_DISABLE_SOURCE_GENERATION=On ${{ github.workspace }}/DXC/
+            cmake -G Ninja -DCMAKE_BUILD_TYPE=${{ inputs.BuildType }} -C ${{ github.workspace }}/DXC/cmake/caches/PredefinedParams.cmake -C ${{ github.workspace }}/OffloadTest/cmake/caches/sccache.cmake -DHLSL_DISABLE_SOURCE_GENERATION=On ${{ github.workspace }}/DXC/
             ninja
       - name: Build LLVM
         run: |
             cd llvm-project
             mkdir build
             cd build
-            cmake -G Ninja ${{ inputs.LLVM-ExtraCMakeArgs }} -DCMAKE_BUILD_TYPE=${{ inputs.BuildType }} -C ${{ github.workspace }}/llvm-project/clang/cmake/caches/HLSL.cmake -C ${{ github.workspace }}/HLSLTest/cmake/caches/sccache.cmake -DDXC_DIR=${{ github.workspace }}/DXC/build/bin -DLLVM_EXTERNAL_HLSLTEST_SOURCE_DIR=${{ github.workspace }}/HLSLTest -DLLVM_EXTERNAL_PROJECTS="HLSLTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DHLSLTEST_TEST_CLANG=${{ inputs.Test-Clang }} -DGOLDENIMAGE_DIR=${{ github.workspace }}/golden-images ${{ github.workspace }}/llvm-project/llvm/
+            cmake -G Ninja ${{ inputs.LLVM-ExtraCMakeArgs }} -DCMAKE_BUILD_TYPE=${{ inputs.BuildType }} -C ${{ github.workspace }}/llvm-project/clang/cmake/caches/HLSL.cmake -C ${{ github.workspace }}/OffloadTest/cmake/caches/sccache.cmake -DDXC_DIR=${{ github.workspace }}/DXC/build/bin -DLLVM_EXTERNAL_OFFLOADTEST_SOURCE_DIR=${{ github.workspace }}/OffloadTest -DLLVM_EXTERNAL_PROJECTS="OffloadTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DOFFLOADTEST_TEST_CLANG=${{ inputs.Test-Clang }} -DGOLDENIMAGE_DIR=${{ github.workspace }}/golden-images ${{ github.workspace }}/llvm-project/llvm/
             ninja hlsl-test-depends
       - name: Run HLSL Tests
         run: |

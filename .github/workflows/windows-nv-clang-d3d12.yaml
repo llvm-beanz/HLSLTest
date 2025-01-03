@@ -18,5 +18,5 @@ jobs:
       SKU: GPU-NV
       Test-Clang: On
       TestTarget: check-hlsl-clang-d3d12
-      HLSLTest-branch: ${{ github.ref }}
+      OffloadTest-branch: ${{ github.ref }}
       LLVM-ExtraCMakeArgs: -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl

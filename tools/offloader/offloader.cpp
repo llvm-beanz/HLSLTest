@@ -26,7 +26,7 @@
 #include <string>
 
 using namespace llvm;
-using namespace hlsltest;
+using namespace offloadtest;
 
 static cl::opt<std::string>
     InputPipeline(cl::Positional, cl::desc("<input pipeline description>"),

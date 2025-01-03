@@ -1,4 +1,5 @@
-//===- HLSLTest/Support/WinError.h - Windows Error Utils --------*- C++ -*-===//
+//===- OffloadTest/Support/WinError.h - Windows Error Utils --------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef HLSLTEST_SUPPORT_WINERROR_H
-#define HLSLTEST_SUPPORT_WINERROR_H
+#ifndef OFFLOADTEST_SUPPORT_WINERROR_H
+#define OFFLOADTEST_SUPPORT_WINERROR_H
 
 #include "llvm/Support/Error.h"
 
@@ -25,4 +26,4 @@ inline llvm::Error toError(HRESULT HR, llvm::StringRef Msg) {
 }
 } // namespace HR
 
-#endif // #ifndef HLSLTEST_SUPPORT_WINERROR_H
+#endif // #ifndef OFFLOADTEST_SUPPORT_WINERROR_H

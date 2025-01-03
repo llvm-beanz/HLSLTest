@@ -9,8 +9,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef HLSLTEST_API_DXFEATURES_H
-#define HLSLTEST_API_DXFEATURES_H
+#ifndef OFFLOADTEST_API_DXFEATURES_H
+#define OFFLOADTEST_API_DXFEATURES_H
 
 #include "API/Capabilities.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -19,7 +19,7 @@ namespace llvm {
 template <typename T> struct EnumEntry;
 }
 
-namespace hlsltest {
+namespace offloadtest {
 namespace directx {
 
 #define SHADER_MODEL_ENUM(NewCase, Str, Value) NewCase = Value,
@@ -42,6 +42,6 @@ template <> struct CapabilityPrinter<directx::RootSignature> {
   static std::string toString(const directx::RootSignature &V);
 };
 
-} // namespace hlsltest
+} // namespace offloadtest
 
-#endif // HLSLTEST_API_DXFEATURES_H
+#endif // OFFLOADTEST_API_DXFEATURES_H

@@ -17,10 +17,10 @@
 
 #include <algorithm>
 
-#ifndef HLSLTEST_IMAGE_IMAGECOMPARATOR_H
-#define HLSLTEST_IMAGE_IMAGECOMPARATOR_H
+#ifndef OFFLOADTEST_IMAGE_IMAGECOMPARATOR_H
+#define OFFLOADTEST_IMAGE_IMAGECOMPARATOR_H
 
-namespace hlsltest {
+namespace offloadtest {
 
 struct CompareCheck {
   enum CheckType {
@@ -129,20 +129,21 @@ public:
     llvm::consumeError(Image::writePNG(DiffImg, OutputFilename));
   }
 };
-} // namespace hlsltest
+} // namespace offloadtest
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(hlsltest::CompareCheck)
+LLVM_YAML_IS_SEQUENCE_VECTOR(offloadtest::CompareCheck)
 
 namespace llvm {
 namespace yaml {
 
-template <> struct MappingTraits<hlsltest::CompareCheck> {
-  static void mapping(IO &I, hlsltest::CompareCheck &C);
+template <> struct MappingTraits<offloadtest::CompareCheck> {
+  static void mapping(IO &I, offloadtest::CompareCheck &C);
 };
 
-template <> struct ScalarEnumerationTraits<hlsltest::CompareCheck::CheckType> {
-  static void enumeration(IO &I, hlsltest::CompareCheck::CheckType &V) {
-#define ENUM_CASE(Val) I.enumCase(V, #Val, hlsltest::CompareCheck::Val)
+template <>
+struct ScalarEnumerationTraits<offloadtest::CompareCheck::CheckType> {
+  static void enumeration(IO &I, offloadtest::CompareCheck::CheckType &V) {
+#define ENUM_CASE(Val) I.enumCase(V, #Val, offloadtest::CompareCheck::Val)
     ENUM_CASE(Furthest);
     ENUM_CASE(RMS);
     ENUM_CASE(DiffRMS);
@@ -154,4 +155,4 @@ template <> struct ScalarEnumerationTraits<hlsltest::CompareCheck::CheckType> {
 } // namespace yaml
 } // namespace llvm
 
-#endif // HLSLTEST_IMAGE_IMAGECOMPARATOR_H
+#endif // OFFLOADTEST_IMAGE_IMAGECOMPARATOR_H

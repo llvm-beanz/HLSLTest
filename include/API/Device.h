@@ -1,4 +1,4 @@
-//===- Device.h - HLSL API Device API -------------------------------------===//
+//===- Device.h - Offload API Device API ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,22 +9,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef HLSLTEST_API_DEVICE_H
-#define HLSLTEST_API_DEVICE_H
+#ifndef OFFLOADTEST_API_DEVICE_H
+#define OFFLOADTEST_API_DEVICE_H
 
 #include "API/API.h"
 #include "API/Capabilities.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 
 #include <memory>
 #include <string>
 
 namespace llvm {
-  class raw_ostream;
+class raw_ostream;
 }
 
-namespace hlsltest {
+namespace offloadtest {
 
 struct Pipeline;
 
@@ -55,6 +55,6 @@ public:
   static inline DeviceRange devices() { return DeviceRange(begin(), end()); }
 };
 
-} // namespace hlsltest
+} // namespace offloadtest
 
-#endif // HLSLTEST_API_DEVICE_H
+#endif // OFFLOADTEST_API_DEVICE_H

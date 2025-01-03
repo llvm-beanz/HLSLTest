@@ -1,4 +1,4 @@
-//===- DX/Device.cpp - HLSL API DirectX Device API ------------------------===//
+//===- DX/Device.cpp - DirectX Device API ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,17 +13,17 @@
 #include "Config.h"
 #include "llvm/Support/Error.h"
 
-using namespace hlsltest;
+using namespace offloadtest;
 
-#ifdef HLSLTEST_ENABLE_D3D12
+#ifdef OFFLOADTEST_ENABLE_D3D12
 llvm::Error InitializeDXDevices();
 #endif
 
-#ifdef HLSLTEST_ENABLE_VULKAN
+#ifdef OFFLOADTEST_ENABLE_VULKAN
 llvm::Error InitializeVXDevices();
 #endif
 
-#ifdef HLSLTEST_ENABLE_METAL
+#ifdef OFFLOADTEST_ENABLE_METAL
 llvm::Error InitializeMTLDevices();
 #endif
 
@@ -61,15 +61,15 @@ void Device::registerDevice(std::shared_ptr<Device> D) {
 }
 
 llvm::Error Device::initialize() {
-#ifdef HLSLTEST_ENABLE_D3D12
+#ifdef OFFLOADTEST_ENABLE_D3D12
   if (auto Err = InitializeDXDevices())
     return Err;
 #endif
-#ifdef HLSLTEST_ENABLE_VULKAN
+#ifdef OFFLOADTEST_ENABLE_VULKAN
   if (auto Err = InitializeVXDevices())
     return Err;
 #endif
-#ifdef HLSLTEST_ENABLE_METAL
+#ifdef OFFLOADTEST_ENABLE_METAL
   if (auto Err = InitializeMTLDevices())
     return Err;
 #endif
@@ -80,6 +80,4 @@ Device::DeviceIterator Device::begin() {
   return DeviceContext::Instance().begin();
 }
 
-Device::DeviceIterator Device::end() {
-  return DeviceContext::Instance().end();
-}
+Device::DeviceIterator Device::end() { return DeviceContext::Instance().end(); }

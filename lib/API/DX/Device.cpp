@@ -1,4 +1,4 @@
-//===- DX/Device.cpp - HLSL API DirectX Device API ------------------------===//
+//===- DX/Device.cpp - DirectX Device API ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,7 +33,7 @@
 #include <codecvt>
 #include <locale>
 
-using namespace hlsltest;
+using namespace offloadtest;
 
 template <> char CapabilityValueEnum<directx::ShaderModel>::ID = 0;
 template <> char CapabilityValueEnum<directx::RootSignature>::ID = 0;
@@ -68,7 +68,7 @@ std::string StringFromWString(const std::wstring &In) {
   return Converter.to_bytes(In);
 }
 
-class DXDevice : public hlsltest::Device {
+class DXDevice : public offloadtest::Device {
 private:
   CComPtr<IDXGIAdapter1> Adapter;
   CComPtr<ID3D12Device> Device;

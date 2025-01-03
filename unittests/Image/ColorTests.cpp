@@ -17,7 +17,7 @@
 
 #include <algorithm>
 
-using namespace hlsltest;
+using namespace offloadtest;
 
 TEST(ColorTests, RoundTrip) {
   {

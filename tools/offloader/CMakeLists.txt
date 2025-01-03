@@ -3,6 +3,6 @@ add_hlsl_tool(offloader
 
 target_link_libraries(offloader PRIVATE
                       LLVMSupport
-                      HLSLTestAPI
-                      HLSLTestImage
-                      HLSLTestSupport)
+                      OffloadTestAPI
+                      OffloadTestImage
+                      OffloadTestSupport)
